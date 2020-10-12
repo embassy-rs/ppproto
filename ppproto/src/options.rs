@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use core::convert::TryInto;
 
 use super::frame_writer::FrameWriter;
 use super::packet_writer::PacketWriter;
@@ -71,14 +71,14 @@ impl<P: Protocol> StateMachine<P> {
 
     pub fn handle(&mut self, pkt: &mut [u8], w: &mut FrameWriter<'_>) -> Result<(), Error> {
         if pkt.len() < 6 {
-            println!("warn: too short");
+            log::info!("warn: too short");
             return Err(Error::TooShort);
         }
         let code = Code::from(pkt[2]);
         let id = pkt[3];
         let len = u16::from_be_bytes(pkt[4..6].try_into().unwrap()) as usize;
         if len + 2 > pkt.len() {
-            println!("warn: len too short");
+            log::info!("warn: len too short");
             return Err(Error::TooShort);
         }
         let pkt = &mut pkt[..len + 2];
@@ -87,7 +87,7 @@ impl<P: Protocol> StateMachine<P> {
         match (code, self.state) {
             // reply EchoReq on state Opened, ignore in all other states (including Closed!)
             (Code::EchoReq, State::Opened) => self.send_echo_response(pkt, w)?,
-            (Code::EchoReq, x) => println!("WARNING: unexpected EchoReq in state {:?}", x),
+            (Code::EchoReq, x) => log::info!("WARNING: unexpected EchoReq in state {:?}", x),
 
             // in state Closed, reply to any packet with TerminateAck (except to EchoReq!)
             (_, State::Closed) => self.send_terminate_ack(id, w)?,
@@ -135,11 +135,11 @@ impl<P: Protocol> StateMachine<P> {
                 }
             }
 
-            x => println!("WARNING: unexpected packet {:?} state {:?}", x, self.state),
+            x => log::info!("WARNING: unexpected packet {:?} state {:?}", x, self.state),
         }
 
         if old_state != self.state {
-            println!(
+            log::info!(
                 "PPP {:?} state {:?} -> {:?}",
                 self.proto.protocol(),
                 old_state,

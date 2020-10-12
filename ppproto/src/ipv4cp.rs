@@ -31,7 +31,7 @@ impl Protocol for IPv4CP {
 
     fn peer_option_received(&mut self, code: u8, data: &[u8]) -> Verdict {
         let opt = Option::from(code);
-        println!("LCP option {:x} {:?} {:x?}", code, opt, data);
+        log::info!("LCP option {:x} {:?} {:x?}", code, opt, data);
         match opt {
             Option::Unknown => Verdict::Rej,
             Option::IpAddress => Verdict::Ack,

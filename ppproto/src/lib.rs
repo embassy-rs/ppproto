@@ -1,4 +1,4 @@
-#![feature(with_options)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 mod crc;
 mod frame_reader;
@@ -140,7 +140,7 @@ impl<'a> PPP<'a> {
             .inner
             .handle(pkt, &mut self.tx_buf)
             .unwrap_or_else(|e| {
-                println!("Error handling packet: {:?}", e);
+                log::info!("Error handling packet: {:?}", e);
                 Action::None
             });
 
@@ -210,7 +210,7 @@ impl Inner {
         }
 
         if old_phase != self.phase {
-            println!("PPP link phase {:?} -> {:?}", old_phase, self.phase);
+            log::info!("PPP link phase {:?} -> {:?}", old_phase, self.phase);
         }
 
         let r = ww.get();

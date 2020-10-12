@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use core::convert::TryInto;
 
 use super::frame_writer::FrameWriter;
 use super::packet_writer::PacketWriter;
@@ -52,19 +52,19 @@ impl PAP {
 
     pub fn handle(&mut self, pkt: &mut [u8], w: &mut FrameWriter<'_>) -> Result<(), Error> {
         if pkt.len() < 6 {
-            println!("warn: too short");
+            log::info!("warn: too short");
             return Err(Error::TooShort);
         }
         let code = Code::from(pkt[2]);
         let _id = pkt[3];
         let len = u16::from_be_bytes(pkt[4..6].try_into().unwrap()) as usize;
         if len > pkt.len() {
-            println!("warn: len too short");
+            log::info!("warn: len too short");
             return Err(Error::TooShort);
         }
         let _pkt = &mut pkt[..len + 2];
 
-        println!("pap {:?} {:?}", code, self.state);
+        log::info!("pap {:?} {:?}", code, self.state);
         let old_state = self.state;
         match (code, self.state) {
             (Code::ConfigureAck, State::ReqSent) => self.state = State::Opened,
@@ -73,7 +73,7 @@ impl PAP {
         }
 
         if old_state != self.state {
-            println!("PPP PAP state {:?} -> {:?}", old_state, self.state);
+            log::info!("PPP PAP state {:?} -> {:?}", old_state, self.state);
         }
 
         Ok(())

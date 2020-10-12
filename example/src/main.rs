@@ -14,6 +14,8 @@ struct Opts {
 }
 
 fn main() {
+    env_logger::init();
+
     let opts: Opts = Opts::parse();
 
     let mut device = SerialPort::new(Path::new(&opts.device)).unwrap();
@@ -47,7 +49,7 @@ fn main() {
                     device.write_all(x).unwrap();
                 }
                 Action::Received(pkt) => {
-                    println!("received packet: {:x?}", pkt);
+                    log::info!("received packet: {:x?}", pkt);
 
                     // Toy code to reply to pings with no error handling whatsoever.
                     let header_len = (pkt[0] & 0x0f) as usize * 4;
@@ -83,7 +85,7 @@ fn main() {
                             let x = ppp.send(&pkt).unwrap();
                             device.write_all(x).unwrap();
 
-                            println!("replied to ping!");
+                            log::info!("replied to ping!");
                         }
                     }
                 }

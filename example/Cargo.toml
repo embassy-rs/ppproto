@@ -9,3 +9,6 @@ clap = "3.0.0-beta.2"
 nix = "0.18.0"
 ppproto = {path = "../ppproto"}
 managed = { version = "0.8.0", default-features = false }
+env_logger = "0.7.1"
+smoltcp = "0.6.0"
+log = "0.4.11"
