@@ -1,0 +1,11 @@
+[package]
+name = "example"
+version = "0.1.0"
+authors = ["Dario Nieuwenhuis <dirbaio@dirbaio.net>"]
+edition = "2018"
+
+[dependencies]
+clap = "3.0.0-beta.2"
+nix = "0.18.0"
+ppproto = {path = "../ppproto"}
+managed = { version = "0.8.0", default-features = false }

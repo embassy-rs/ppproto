@@ -1,0 +1,25 @@
+      | State
+      |    0         1         2         3         4         5         6         7         8           9
+Events| Initial   Starting  Closed    Stopped   Closing   Stopping  Req-Sent  Ack-Rcvd  Ack-Sent    Opened
+------+-----------------------------------------------------------------------------------------------------
+ Up   |    2     irc,scr/6     -         -         -         -         -         -         -           -
+ Down |    -         -         0       tls/1       0         1         1         1         1         tld/1
+ Open |  tls/1       1     irc,scr/6     3r        5r        5r        6         7         8           9r
+ Close|    0       tlf/0       2         2         4         4     irc,str/4 irc,str/4 irc,str/4 tld,irc,str/4
+      |                                                            
+  TO+ |    -         -         -         -       str/4     str/5     scr/6     scr/6     scr/8         -
+  TO- |    -         -         -         -       tlf/2     tlf/3     tlf/3p    tlf/3p    tlf/3p        -
+      |                                                            
+ RCR+ |    -         -       sta/2 irc,scr,sca/8   4         5       sca/8   sca,tlu/9   sca/8   tld,scr,sca/8
+ RCR- |    -         -       sta/2 irc,scr,scn/6   4         5       scn/6     scn/7     scn/6   tld,scr,scn/6
+ RCA  |    -         -       sta/2     sta/3       4         5       irc/7     scr/6x  irc,tlu/9   tld,scr/6x
+ RCN  |    -         -       sta/2     sta/3       4         5     irc,scr/6   scr/6x  irc,scr/8   tld,scr/6x
+      |                                                            
+ RTR  |    -         -       sta/2     sta/3     sta/4     sta/5     sta/6     sta/6     sta/6   tld,zrc,sta/5
+ RTA  |    -         -         2         3       tlf/2     tlf/3       6         6         8       tld,scr/6
+      |                                                            
+ RUC  |    -         -       scj/2     scj/3     scj/4     scj/5     scj/6     scj/7     scj/8       scj/9
+ RXJ+ |    -         -         2         3         4         5         6         6         8           9
+ RXJ- |    -         -       tlf/2     tlf/3     tlf/2     tlf/3     tlf/3     tlf/3     tlf/3   tld,irc,str/5
+      |                                                            
+ RXR  |    -         -         2         3         4         5         6         7         8         ser/9
