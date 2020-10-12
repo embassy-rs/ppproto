@@ -16,3 +16,13 @@ pppd $PWD/pty1 115200 192.168.7.1:192.168.7.2 nodetach debug local persist silen
 cargo run -p example  -- --device pty2
 ping 192.168.7.2
 ```
+
+## License
+
+This work is licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
+  http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
