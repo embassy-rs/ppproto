@@ -16,7 +16,7 @@ enum Option {
     Dns2 = 131,
 }
 
-pub struct IPv4CP {
+pub(crate) struct IPv4CP {
     address: Ipv4Address,
     peer_address: Ipv4Address,
     dns_server_1: Ipv4Address,

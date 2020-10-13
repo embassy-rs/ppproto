@@ -1,7 +1,7 @@
 use super::frame_writer::FrameWriter;
 use super::{Code, Error, ProtocolType};
 
-pub struct PacketWriter {
+pub(crate) struct PacketWriter {
     buf: [u8; 256],
     len: usize,
 }

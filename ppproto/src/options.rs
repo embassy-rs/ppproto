@@ -5,13 +5,13 @@ use super::packet_writer::PacketWriter;
 use super::{Code, Error, ProtocolType};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Verdict<'a> {
+pub(crate) enum Verdict<'a> {
     Ack,
     Nack(&'a [u8]),
     Rej,
 }
 
-pub trait Protocol {
+pub(crate) trait Protocol {
     fn protocol(&self) -> ProtocolType;
 
     fn own_options(&mut self, p: &mut PacketWriter) -> Result<(), Error>;
@@ -22,7 +22,7 @@ pub trait Protocol {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum State {
+pub(crate) enum State {
     Closed,
     ReqSent,
     AckReceived,
@@ -30,7 +30,7 @@ pub enum State {
     Opened,
 }
 
-pub struct StateMachine<P> {
+pub(crate) struct StateMachine<P> {
     id: u8,
     state: State,
     proto: P,

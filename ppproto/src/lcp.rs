@@ -19,7 +19,7 @@ pub enum AuthType {
     PAP = 0xc023,
 }
 
-pub struct LCP {
+pub(crate) struct LCP {
     pub auth: AuthType,
 }
 

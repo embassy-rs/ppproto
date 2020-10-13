@@ -26,11 +26,12 @@ pub enum Error {
     Invalid,
     Unsupported,
     NoMem,
+    InvalidState,
 }
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(u16)]
-pub enum ProtocolType {
+pub(crate) enum ProtocolType {
     #[num_enum(default)]
     Unknown = 0,
     /// Link Control Protocol,  rfc1661
@@ -45,7 +46,7 @@ pub enum ProtocolType {
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
 #[repr(u8)]
-pub enum Code {
+pub(crate) enum Code {
     #[num_enum(default)]
     Unknown = 0,
     ConfigureReq = 1,
@@ -63,26 +64,21 @@ pub enum Code {
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
 enum Phase {
+    Dead,
     Establish,
     Auth,
     Network,
     Open,
 }
 
-pub enum Action<'a> {
+pub enum Action<'a, 'b> {
     None,
-    Response(&'a mut [u8]),
     Received(&'a mut [u8]),
+    Transmit(&'b mut [u8]),
 }
 
 pub struct PPP<'a> {
-    tx_buf: ManagedSlice<'a, u8>,
     frame_reader: FrameReader<'a>,
-
-    inner: Inner,
-}
-
-struct Inner {
     phase: Phase,
     lcp: StateMachine<LCP>,
     pap: PAP,
@@ -90,87 +86,60 @@ struct Inner {
 }
 
 impl<'a> PPP<'a> {
-    pub fn new(rx_buf: ManagedSlice<'a, u8>, tx_buf: ManagedSlice<'a, u8>) -> Self {
+    pub fn new(rx_buf: ManagedSlice<'a, u8>) -> Self {
         Self {
-            tx_buf,
             frame_reader: FrameReader::new(rx_buf),
-            inner: Inner {
-                phase: Phase::Establish,
-                lcp: StateMachine::new(LCP::new()),
-                pap: PAP::new(b"orange", b"orange"),
-                ipv4cp: StateMachine::new(IPv4CP::new()),
-            },
+            phase: Phase::Dead,
+            lcp: StateMachine::new(LCP::new()),
+            pap: PAP::new(b"orange", b"orange"),
+            ipv4cp: StateMachine::new(IPv4CP::new()),
         }
     }
 
-    pub fn poll(&mut self) -> Action<'_> {
-        let mut ww = FrameWriter::new(&mut self.tx_buf);
-        let w = &mut ww;
-
-        self.inner.lcp.open(w).unwrap();
-
-        let r = ww.get();
-        if r.len() == 0 {
-            Action::None
-        } else {
-            Action::Response(r)
+    pub fn open(&mut self) -> Result<(), Error> {
+        match self.phase {
+            Phase::Dead => {
+                self.phase = Phase::Establish;
+                Ok(())
+            }
+            _ => Err(Error::InvalidState),
         }
     }
 
-    pub fn send(&mut self, pkt: &[u8]) -> Result<&mut [u8], Error> {
-        // TODO check IPv4CP is up
-
-        let mut w = FrameWriter::new(&mut self.tx_buf);
-        let proto: u16 = ProtocolType::IPv4.into();
-        w.start()?;
-        w.append(&proto.to_be_bytes())?;
-        w.append(pkt)?;
-        w.finish()?;
-        Ok(w.get())
-    }
-
-    pub fn consume(&mut self, data: &[u8]) -> (usize, Action<'_>) {
-        let (n, data) = self.frame_reader.consume(data);
-        let pkt = match data {
-            Some(pkt) => pkt,
-            None => return (n, Action::None),
-        };
-
-        let r = self
-            .inner
-            .handle(pkt, &mut self.tx_buf)
-            .unwrap_or_else(|e| {
-                log::info!("Error handling packet: {:?}", e);
-                Action::None
-            });
-
-        (n, r)
-    }
-}
-
-impl Inner {
-    fn handle<'a>(&mut self, pkt: &'a mut [u8], tx_buf: &'a mut [u8]) -> Result<Action<'a>, Error> {
+    /// Process received data and generate data to be send.
+    ///
+    /// Action::Received is returned when an IP packet is received. You must then pass the packet
+    /// to higher layers for processing.
+    ///
+    /// You must provide buffer space for data to be transmitted, and transmit the returned slice
+    /// over the serial connection if Action::Transmit is returned.
+    pub fn poll<'b, 'c>(&'b mut self, tx_buf: &'c mut [u8]) -> Result<Action<'b, 'c>, Error> {
         let mut ww = FrameWriter::new(tx_buf);
         let w = &mut ww;
 
-        let proto = u16::from_be_bytes(pkt[0..2].try_into().unwrap());
+        // Handle input
+        if let Some(pkt) = self.frame_reader.receive() {
+            let proto = u16::from_be_bytes(pkt[0..2].try_into().unwrap());
 
-        match proto.into() {
-            ProtocolType::LCP => self.lcp.handle(pkt, w)?,
-            ProtocolType::PAP => self.pap.handle(pkt, w)?,
-            ProtocolType::IPv4 => return Ok(Action::Received(&mut pkt[2..])),
-            ProtocolType::IPv4CP => self.ipv4cp.handle(pkt, w)?,
-            ProtocolType::Unknown => self.lcp.send_protocol_reject(pkt, w)?,
+            match proto.into() {
+                ProtocolType::LCP => self.lcp.handle(pkt, w)?,
+                ProtocolType::PAP => self.pap.handle(pkt, w)?,
+                ProtocolType::IPv4 => return Ok(Action::Received(&mut pkt[2..])),
+                ProtocolType::IPv4CP => self.ipv4cp.handle(pkt, w)?,
+                ProtocolType::Unknown => self.lcp.send_protocol_reject(pkt, w)?,
+            }
         }
 
+        // TODO this state machine can probably be written in nicer way.
+        // TODO this is probably not rfc compliant, check what other impls do
         let old_phase = self.phase;
-
-        if self.lcp.state() != State::Opened {
-            self.phase = Phase::Establish;
-        }
-
         match self.phase {
+            Phase::Dead => {}
             Phase::Establish => {
+                if self.lcp.state() == State::Closed {
+                    self.lcp.open(w)?;
+                }
+
                 if self.lcp.state() == State::Opened {
                     match self.lcp.proto().auth {
                         AuthType::None => {
@@ -217,7 +186,33 @@ impl Inner {
         if r.len() == 0 {
             Ok(Action::None)
         } else {
-            Ok(Action::Response(r))
+            Ok(Action::Transmit(r))
         }
+    }
+
+    /// Send an IP packet.
+    ///
+    /// You must provide buffer space for the data to be transmitted, and transmit the returned
+    /// slice over the serial connection.
+    pub fn send<'b>(&mut self, pkt: &[u8], tx_buf: &'b mut [u8]) -> Result<&'b mut [u8], Error> {
+        // TODO check IPv4CP is up
+
+        let mut w = FrameWriter::new(tx_buf);
+        let proto: u16 = ProtocolType::IPv4.into();
+        w.start()?;
+        w.append(&proto.to_be_bytes())?;
+        w.append(pkt)?;
+        w.finish()?;
+        Ok(w.get())
+    }
+
+    /// Consume data received from the serial connection.
+    ///
+    /// After calling `consume`, `poll` must be called to process the consumed data.
+    ///
+    /// Returns how many bytes were actually consumed. If less than `data.len()`, `consume`
+    /// must be called again with the remaining data.
+    pub fn consume(&mut self, data: &[u8]) -> usize {
+        self.frame_reader.consume(data)
     }
 }
