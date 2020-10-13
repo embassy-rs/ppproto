@@ -1,5 +1,3 @@
-use managed::ManagedSlice;
-
 use super::crc::crc16;
 
 #[derive(Copy, Clone, Debug)]
@@ -14,11 +12,11 @@ pub struct FrameReader<'a> {
     state: State,
     escape: bool,
     len: usize,
-    buf: ManagedSlice<'a, u8>,
+    buf: &'a mut [u8],
 }
 
 impl<'a> FrameReader<'a> {
-    pub fn new(buf: managed::ManagedSlice<'a, u8>) -> Self {
+    pub fn new(buf: &'a mut [u8]) -> Self {
         Self {
             state: State::Start,
             escape: false,

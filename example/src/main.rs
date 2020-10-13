@@ -21,8 +21,7 @@ fn main() {
     let mut device = SerialPort::new(Path::new(&opts.device)).unwrap();
 
     let mut rx_buf = [0; 2048];
-    let rx_buf = ManagedSlice::Borrowed(&mut rx_buf);
-    let mut ppp = PPP::new(rx_buf);
+    let mut ppp = PPP::new(&mut rx_buf);
     ppp.open().unwrap();
 
     let mut tx_buf = [0; 2048];

@@ -10,7 +10,6 @@ mod packet_writer;
 mod pap;
 
 use core::convert::TryInto;
-use managed::ManagedSlice;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use self::frame_reader::FrameReader;
@@ -86,7 +85,7 @@ pub struct PPP<'a> {
 }
 
 impl<'a> PPP<'a> {
-    pub fn new(rx_buf: ManagedSlice<'a, u8>) -> Self {
+    pub fn new(rx_buf: &'a mut [u8]) -> Self {
         Self {
             frame_reader: FrameReader::new(rx_buf),
             phase: Phase::Dead,
