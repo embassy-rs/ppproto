@@ -2,6 +2,8 @@ use std::io;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::path::Path;
 
+use nix::fcntl::{fcntl, FcntlArg, OFlag};
+use nix::sys::termios;
 use nix::Error;
 
 pub struct SerialPort {
@@ -10,17 +12,14 @@ pub struct SerialPort {
 
 impl SerialPort {
     pub fn new(path: &Path) -> io::Result<Self> {
-        use nix::fcntl::OFlag;
-        use nix::sys::termios;
-
         let fd = nix::fcntl::open(
             path,
             OFlag::O_RDWR | OFlag::O_NOCTTY,
             nix::sys::stat::Mode::empty(),
         )
-        .unwrap();
+        .map_err(to_io_error)?;
 
-        let mut cfg = termios::tcgetattr(fd).unwrap();
+        let mut cfg = termios::tcgetattr(fd).map_err(to_io_error)?;
         cfg.input_flags = termios::InputFlags::empty();
         cfg.output_flags = termios::OutputFlags::empty();
         cfg.control_flags = termios::ControlFlags::empty();
@@ -29,11 +28,11 @@ impl SerialPort {
         cfg.input_flags |= termios::InputFlags::IGNBRK;
         cfg.control_flags |= termios::ControlFlags::CREAD;
         cfg.control_flags |= termios::ControlFlags::CRTSCTS;
-        termios::cfsetospeed(&mut cfg, termios::BaudRate::B115200).unwrap();
-        termios::cfsetispeed(&mut cfg, termios::BaudRate::B115200).unwrap();
-        termios::cfsetspeed(&mut cfg, termios::BaudRate::B115200).unwrap();
-        termios::tcsetattr(fd, termios::SetArg::TCSANOW, &cfg).unwrap();
-        termios::tcflush(fd, termios::FlushArg::TCIOFLUSH).unwrap();
+        termios::cfsetospeed(&mut cfg, termios::BaudRate::B115200).map_err(to_io_error)?;
+        termios::cfsetispeed(&mut cfg, termios::BaudRate::B115200).map_err(to_io_error)?;
+        termios::cfsetspeed(&mut cfg, termios::BaudRate::B115200).map_err(to_io_error)?;
+        termios::tcsetattr(fd, termios::SetArg::TCSANOW, &cfg).map_err(to_io_error)?;
+        termios::tcflush(fd, termios::FlushArg::TCIOFLUSH).map_err(to_io_error)?;
 
         Ok(Self { fd })
     }
@@ -45,25 +44,25 @@ impl AsRawFd for SerialPort {
     }
 }
 
-fn to_io_error(e: Error) -> io::Error {
-    match e {
-        Error::Sys(errno) => errno.into(),
-        e => io::Error::new(io::ErrorKind::InvalidInput, e),
-    }
-}
-
 impl io::Read for SerialPort {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        nix::unistd::read(self.fd, buf).map_err(|e| to_io_error(e))
+        nix::unistd::read(self.fd, buf).map_err(to_io_error)
     }
 }
 
 impl io::Write for SerialPort {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        nix::unistd::write(self.fd, buf).map_err(|e| to_io_error(e))
+        nix::unistd::write(self.fd, buf).map_err(to_io_error)
     }
 
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
+    }
+}
+
+fn to_io_error(e: Error) -> io::Error {
+    match e {
+        Error::Sys(errno) => errno.into(),
+        e => io::Error::new(io::ErrorKind::InvalidInput, e),
     }
 }
