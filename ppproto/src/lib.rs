@@ -10,6 +10,7 @@ mod packet_writer;
 mod pap;
 
 use core::convert::TryInto;
+use core::marker::PhantomData;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use self::frame_reader::FrameReader;
@@ -72,7 +73,7 @@ enum Phase {
 
 pub enum Action<'a, 'b> {
     None,
-    Received(&'a mut [u8]),
+    Received(&'a mut [u8], Sender<'a>),
     Transmit(&'b mut [u8]),
 }
 
@@ -108,7 +109,8 @@ impl<'a> PPP<'a> {
     /// Process received data and generate data to be send.
     ///
     /// Action::Received is returned when an IP packet is received. You must then pass the packet
-    /// to higher layers for processing.
+    /// to higher layers for processing. A Sender is also returned to allow sending outgoing
+    /// packets while keeping the borrow of the incoming packet.
     ///
     /// You must provide buffer space for data to be transmitted, and transmit the returned slice
     /// over the serial connection if Action::Transmit is returned.
@@ -123,7 +125,14 @@ impl<'a> PPP<'a> {
             match proto.into() {
                 ProtocolType::LCP => self.lcp.handle(pkt, w)?,
                 ProtocolType::PAP => self.pap.handle(pkt, w)?,
-                ProtocolType::IPv4 => return Ok(Action::Received(&mut pkt[2..])),
+                ProtocolType::IPv4 => {
+                    return Ok(Action::Received(
+                        &mut pkt[2..],
+                        Sender {
+                            phantom: PhantomData,
+                        },
+                    ))
+                }
                 ProtocolType::IPv4CP => self.ipv4cp.handle(pkt, w)?,
                 ProtocolType::Unknown => self.lcp.send_protocol_reject(pkt, w)?,
             }
@@ -189,6 +198,30 @@ impl<'a> PPP<'a> {
         }
     }
 
+    /// Get a Sender object.
+    pub fn sender(&mut self) -> Sender<'_> {
+        Sender {
+            phantom: PhantomData,
+        }
+    }
+
+    /// Consume data received from the serial connection.
+    ///
+    /// After calling `consume`, `poll` must be called to process the consumed data.
+    ///
+    /// Returns how many bytes were actually consumed. If less than `data.len()`, `consume`
+    /// must be called again with the remaining data.
+    pub fn consume(&mut self, data: &[u8]) -> usize {
+        self.frame_reader.consume(data)
+    }
+}
+
+/// Sender can be used to send IP packets over a PPP connection.
+pub struct Sender<'a> {
+    phantom: PhantomData<&'a mut ()>,
+}
+
+impl<'a> Sender<'a> {
     /// Send an IP packet.
     ///
     /// You must provide buffer space for the data to be transmitted, and transmit the returned
@@ -203,15 +236,5 @@ impl<'a> PPP<'a> {
         w.append(pkt)?;
         w.finish()?;
         Ok(w.get())
-    }
-
-    /// Consume data received from the serial connection.
-    ///
-    /// After calling `consume`, `poll` must be called to process the consumed data.
-    ///
-    /// Returns how many bytes were actually consumed. If less than `data.len()`, `consume`
-    /// must be called again with the remaining data.
-    pub fn consume(&mut self, data: &[u8]) -> usize {
-        self.frame_reader.consume(data)
     }
 }

@@ -33,7 +33,7 @@ fn main() {
         match ppp.poll(&mut tx_buf).unwrap() {
             Action::None => {}
             Action::Transmit(x) => device.write_all(x).unwrap(),
-            Action::Received(pkt) => {
+            Action::Received(pkt, mut sender) => {
                 log::info!("received packet: {:x?}", pkt);
 
                 // Toy code to reply to pings with no error handling whatsoever.
@@ -46,9 +46,6 @@ fn main() {
 
                     if icmp_type == 8 && icmp_code == 0 {
                         // ICMP Echo Request
-
-                        // Copy the packet. This is necessary due to borrows.
-                        let mut pkt = Vec::from(pkt);
 
                         // Transform to echo response
                         pkt[header_len] = 0;
@@ -68,7 +65,7 @@ fn main() {
                         pkt[16..20].copy_from_slice(&src_addr);
 
                         // Send it!
-                        let x = ppp.send(&pkt, &mut tx_buf).unwrap();
+                        let x = sender.send(&pkt, &mut tx_buf).unwrap();
                         device.write_all(x).unwrap();
 
                         log::info!("replied to ping!");
