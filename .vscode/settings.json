@@ -1,3 +1,4 @@
 {
-    "editor.formatOnSave": true
+  "rust-analyzer.diagnostics.disabled": ["unresolved-import"],
+  "editor.formatOnSave": true,
 }

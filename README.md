@@ -12,7 +12,7 @@ Rust implementation of the Point-to-Point Protocol (PPP) for embedded systems. `
 
 ```
 socat -v -x PTY,link=pty1,rawer PTY,link=pty2,rawer
-pppd $PWD/pty1 115200 192.168.7.1:192.168.7.2 nodetach debug local persist silent noproxyarp
+pppd $PWD/pty1 115200 192.168.7.1:192.168.7.2 ms-dns 8.8.4.4 ms-dns 8.8.8.8 nodetach debug local persist silent noproxyarp
 cargo run -p example  -- --device pty2
 ping 192.168.7.2
 ```

@@ -36,6 +36,16 @@ impl SerialPort {
 
         Ok(Self { fd })
     }
+
+    pub fn set_nonblocking(&mut self, nonblocking: bool) -> io::Result<()> {
+        let f = if nonblocking {
+            OFlag::O_NONBLOCK
+        } else {
+            OFlag::empty()
+        };
+        fcntl(self.fd, FcntlArg::F_SETFL(f)).map_err(to_io_error)?;
+        Ok(())
+    }
 }
 
 impl AsRawFd for SerialPort {

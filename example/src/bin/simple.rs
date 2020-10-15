@@ -1,3 +1,4 @@
+#[path = "../serial_port.rs"]
 mod serial_port;
 
 use clap::Clap;
@@ -18,7 +19,7 @@ fn main() {
 
     let opts: Opts = Opts::parse();
 
-    let mut device = SerialPort::new(Path::new(&opts.device)).unwrap();
+    let mut port = SerialPort::new(Path::new(&opts.device)).unwrap();
 
     let mut rx_buf = [0; 2048];
     let mut ppp = PPP::new(&mut rx_buf);
@@ -32,7 +33,7 @@ fn main() {
         // Poll the ppp
         match ppp.poll(&mut tx_buf).unwrap() {
             Action::None => {}
-            Action::Transmit(x) => device.write_all(x).unwrap(),
+            Action::Transmit(x) => port.write_all(x).unwrap(),
             Action::Received(pkt, mut sender) => {
                 log::info!("received packet: {:x?}", pkt);
 
@@ -66,7 +67,7 @@ fn main() {
 
                         // Send it!
                         let x = sender.send(&pkt, &mut tx_buf).unwrap();
-                        device.write_all(x).unwrap();
+                        port.write_all(x).unwrap();
 
                         log::info!("replied to ping!");
                     }
@@ -76,7 +77,7 @@ fn main() {
 
         // If we have no data, read some.
         if data.len() == 0 {
-            let n = device.read(&mut read_buf).unwrap();
+            let n = port.read(&mut read_buf).unwrap();
             data = &read_buf[..n];
         }
 

@@ -10,3 +10,7 @@ members = [
 exclude = [
     "third_party",
 ]
+
+[patch.crates-io]
+smoltcp = { git = "https://github.com/akiles/smoltcp", branch="master"}
+#smoltcp = { path = "third_party/smoltcp" }
