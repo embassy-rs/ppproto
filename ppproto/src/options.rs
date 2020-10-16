@@ -134,6 +134,16 @@ impl<P: Protocol> StateMachine<P> {
                     _ => self.state = State::ReqSent,
                 }
             }
+            (Code::TerminateReq, State::Opened) => {
+                self.send_terminate_ack(id, w)?;
+                self.state = State::Closed;
+            }
+            (Code::TerminateReq, State::ReqSent)
+            | (Code::TerminateReq, State::AckReceived)
+            | (Code::TerminateReq, State::AckSent) => {
+                self.send_terminate_ack(id, w)?;
+                self.state = State::ReqSent;
+            }
 
             x => log::info!("WARNING: unexpected packet {:?} state {:?}", x, self.state),
         }
