@@ -20,6 +20,8 @@ use self::lcp::{AuthType, LCP};
 use self::options::{State, StateMachine};
 use self::pap::{State as PAPState, PAP};
 
+pub use ipv4cp::Ipv4Config;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Error {
     TooShort,
@@ -85,14 +87,30 @@ pub struct PPP<'a> {
     ipv4cp: StateMachine<IPv4CP>,
 }
 
+#[derive(Debug)]
+pub struct Config {
+    /// IPv4 configuration obtained from IPv4CP. None if IPv4CP is not up.
+    pub ipv4: Option<Ipv4Config>,
+}
+
 impl<'a> PPP<'a> {
     pub fn new(rx_buf: &'a mut [u8]) -> Self {
         Self {
             frame_reader: FrameReader::new(rx_buf),
             phase: Phase::Dead,
             lcp: StateMachine::new(LCP::new()),
-            pap: PAP::new(b"orange", b"orange"),
+            pap: PAP::new(b"myuser", b"mypass"),
             ipv4cp: StateMachine::new(IPv4CP::new()),
+        }
+    }
+
+    pub fn config(&self) -> Config {
+        Config {
+            ipv4: if self.ipv4cp.state() == State::Opened {
+                Some(self.ipv4cp.proto().config())
+            } else {
+                None
+            },
         }
     }
 

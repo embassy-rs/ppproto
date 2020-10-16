@@ -10,11 +10,17 @@ Rust implementation of the Point-to-Point Protocol (PPP) for embedded systems. `
 
 ## Testing against pppd
 
+Put this in `/etc/ppp/pap-secrets`, where `myhostname` is the hostname of your machine.
+
+```
+myuser myhostname mypass 192.168.7.10
+```
+
 ```
 socat -v -x PTY,link=pty1,rawer PTY,link=pty2,rawer
-pppd $PWD/pty1 115200 192.168.7.1:192.168.7.2 ms-dns 8.8.4.4 ms-dns 8.8.8.8 nodetach debug local persist silent noproxyarp
-cargo run -p example  -- --device pty2
-ping 192.168.7.2
+pppd $PWD/pty1 115200 192.168.7.1: ms-dns 8.8.4.4 ms-dns 8.8.8.8 nodetach debug local persist silent noproxyarp
+RUST_LOG=trace cargo run --bin simple -- --device pty2
+ping 192.168.7.10
 ```
 
 ## License

@@ -49,7 +49,11 @@ impl<P: Protocol> StateMachine<P> {
         self.state
     }
 
-    pub fn proto(&mut self) -> &mut P {
+    pub fn proto(&self) -> &P {
+        &self.proto
+    }
+
+    pub fn proto_mut(&mut self) -> &mut P {
         &mut self.proto
     }
 

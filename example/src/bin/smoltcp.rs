@@ -47,7 +47,6 @@ impl<'a> Device<'a> for PPPDevice {
     type TxToken = PPPTxToken<'a>;
 
     fn receive(&'a mut self) -> Option<(Self::RxToken, Self::TxToken)> {
-        log::info!("PPPDevice receive");
         self.port.set_nonblocking(true).unwrap();
 
         let mut tx_buf = [0; 2048];
@@ -62,7 +61,6 @@ impl<'a> Device<'a> for PPPDevice {
                 Action::Received(pkt, sender) => {
                     let pkt = unsafe { mem::transmute(pkt) };
                     let sender = unsafe { mem::transmute(sender) };
-                    log::info!("received packet: {:x?}", pkt);
                     return Some((
                         PPPRxToken { pkt },
                         PPPTxToken {
@@ -91,7 +89,6 @@ impl<'a> Device<'a> for PPPDevice {
 
     /// Construct a transmit token.
     fn transmit(&'a mut self) -> Option<Self::TxToken> {
-        log::info!("PPPDevice transmit");
         Some(PPPTxToken {
             port: &mut self.port,
             sender: self.ppp.sender(),
@@ -116,7 +113,6 @@ impl<'a> RxToken for PPPRxToken<'a> {
     where
         F: FnOnce(&mut [u8]) -> Result<R>,
     {
-        log::info!("PPPDevice RxToken consume");
         f(self.pkt)
     }
 }
@@ -131,7 +127,6 @@ impl<'a> TxToken for PPPTxToken<'a> {
     where
         F: FnOnce(&mut [u8]) -> Result<R>,
     {
-        log::info!("PPPDevice TxToken consume");
         let mut pkt_buf = [0; 2048];
         let pkt = &mut pkt_buf[..len];
         let r = f(pkt)?;
@@ -184,7 +179,7 @@ fn main() {
     let tcp4_socket = TcpSocket::new(tcp4_rx_buffer, tcp4_tx_buffer);
 
     //let ip_addrs = [IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0)];
-    let ip_addrs = [IpCidr::new(Ipv4Address::new(192, 168, 7, 2).into(), 0)];
+    let ip_addrs = [IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0)];
     let mut iface = InterfaceBuilder::new(device).ip_addrs(ip_addrs).finalize();
 
     let mut sockets = SocketSet::new(vec![]);
@@ -196,12 +191,25 @@ fn main() {
 
     let mut tcp_6970_active = false;
     loop {
-        info!("poll");
         let timestamp = Instant::now();
         match iface.poll(&mut sockets, timestamp) {
             Ok(_) => {}
             Err(e) => {
                 debug!("poll error: {}", e);
+            }
+        }
+
+        let config = iface.device().ppp.config();
+
+        if let Some(ipv4) = config.ipv4 {
+            if let Some(want_addr) = ipv4.address {
+                iface.update_ip_addrs(|addrs| {
+                    let addr = &mut addrs[0];
+                    if addr.address() != want_addr.into() {
+                        *addr = IpCidr::new(want_addr.into(), 0);
+                        info!("Assigned a new IPv4 address: {}", want_addr);
+                    }
+                });
             }
         }
 
@@ -337,7 +345,6 @@ fn main() {
             }
         }
 
-        log::info!("phy_waiting");
         phy_wait(fd, iface.poll_delay(&sockets, timestamp)).expect("wait error");
     }
 }

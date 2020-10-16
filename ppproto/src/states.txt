@@ -23,3 +23,31 @@ Events| Initial   Starting  Closed    Stopped   Closing   Stopping  Req-Sent  Ac
  RXJ- |    -         -       tlf/2     tlf/3     tlf/2     tlf/3     tlf/3     tlf/3     tlf/3   tld,irc,str/5
       |                                                            
  RXR  |    -         -         2         3         4         5         6         7         8         ser/9
+
+
+   Events                                   Actions
+
+   Up   = lower layer is Up                 tlu = This-Layer-Up
+   Down = lower layer is Down               tld = This-Layer-Down
+   Open = administrative Open               tls = This-Layer-Started
+   Close= administrative Close              tlf = This-Layer-Finished
+
+   TO+  = Timeout with counter > 0          irc = Initialize-Restart-Count
+   TO-  = Timeout with counter expired      zrc = Zero-Restart-Count
+
+   RCR+ = Receive-Configure-Request (Good)  scr = Send-Configure-Request
+   RCR- = Receive-Configure-Request (Bad)
+   RCA  = Receive-Configure-Ack             sca = Send-Configure-Ack
+   RCN  = Receive-Configure-Nak/Rej         scn = Send-Configure-Nak/Rej
+
+   RTR  = Receive-Terminate-Request         str = Send-Terminate-Request
+   RTA  = Receive-Terminate-Ack             sta = Send-Terminate-Ack
+
+   RUC  = Receive-Unknown-Code              scj = Send-Code-Reject
+   RXJ+ = Receive-Code-Reject (permitted)
+       or Receive-Protocol-Reject
+   RXJ- = Receive-Code-Reject (catastrophic)
+       or Receive-Protocol-Reject
+   RXR  = Receive-Echo-Request              ser = Send-Echo-Reply
+       or Receive-Echo-Reply
+       or Receive-Discard-Request

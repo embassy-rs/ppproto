@@ -2,7 +2,6 @@
 mod serial_port;
 
 use clap::Clap;
-use managed::ManagedSlice;
 use ppproto::{Action, Error, PPP};
 use serial_port::SerialPort;
 use std::io::{Read, Write};
