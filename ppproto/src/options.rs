@@ -4,6 +4,8 @@ use super::frame_writer::FrameWriter;
 use super::packet_writer::PacketWriter;
 use super::{Code, Error, ProtocolType};
 
+use log::info;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum Verdict<'a> {
     Ack,
@@ -75,23 +77,27 @@ impl<P: Protocol> StateMachine<P> {
 
     pub fn handle(&mut self, pkt: &mut [u8], w: &mut FrameWriter<'_>) -> Result<(), Error> {
         if pkt.len() < 6 {
-            log::info!("warn: too short");
+            info!("warn: too short");
             return Err(Error::TooShort);
         }
         let code = Code::from(pkt[2]);
         let id = pkt[3];
         let len = u16::from_be_bytes(pkt[4..6].try_into().unwrap()) as usize;
         if len + 2 > pkt.len() {
-            log::info!("warn: len too short");
+            info!("warn: len too short");
             return Err(Error::TooShort);
         }
         let pkt = &mut pkt[..len + 2];
 
+        info!("{:?}: rx {:?}", self.proto.protocol(), code);
         let old_state = self.state;
         match (code, self.state) {
             // reply EchoReq on state Opened, ignore in all other states (including Closed!)
             (Code::EchoReq, State::Opened) => self.send_echo_response(pkt, w)?,
-            (Code::EchoReq, x) => log::info!("WARNING: unexpected EchoReq in state {:?}", x),
+            (Code::EchoReq, x) => info!("WARNING: unexpected EchoReq in state {:?}", x),
+
+            // DiscardReqs are, well, discarded.
+            (Code::DiscardReq, _) => {}
 
             // in state Closed, reply to any packet with TerminateAck (except to EchoReq!)
             (_, State::Closed) => self.send_terminate_ack(id, w)?,
@@ -126,6 +132,11 @@ impl<P: Protocol> StateMachine<P> {
             (Code::ConfigureNack, _) | (Code::ConfigureRej, _) => {
                 let is_rej = code == Code::ConfigureRej;
 
+                if pkt.len() < 6 {
+                    return Err(Error::TooShort);
+                }
+                let pkt = &pkt[6..]; // skip header
+
                 parse_options(pkt, |code, data| {
                     self.proto.own_option_nacked(code, data, is_rej);
                     Ok(())
@@ -149,12 +160,12 @@ impl<P: Protocol> StateMachine<P> {
                 self.state = State::ReqSent;
             }
 
-            x => log::info!("WARNING: unexpected packet {:?} state {:?}", x, self.state),
+            x => info!("WARNING: unexpected packet {:?} state {:?}", x, self.state),
         }
 
         if old_state != self.state {
-            log::info!(
-                "PPP {:?} state {:?} -> {:?}",
+            info!(
+                "{:?}: state {:?} -> {:?}",
                 self.proto.protocol(),
                 old_state,
                 self.state
@@ -172,6 +183,18 @@ impl<P: Protocol> StateMachine<P> {
     fn send_configure_request(&mut self, w: &mut FrameWriter<'_>) -> Result<(), Error> {
         let mut p = PacketWriter::new();
         self.proto.own_options(&mut p)?;
+
+        info!("{:?}: tx {:?}", self.proto.protocol(), Code::ConfigureReq);
+        parse_options(p.get_buf(), |code, data| {
+            log::info!(
+                "{:?}: tx option {:x} {:x?}",
+                self.proto.protocol(),
+                code,
+                data
+            );
+            Ok(())
+        })?;
+
         p.write(w, self.proto.protocol(), Code::ConfigureReq, self.next_id())
     }
 
@@ -180,23 +203,27 @@ impl<P: Protocol> StateMachine<P> {
         reason: &[u8],
         w: &mut FrameWriter<'_>,
     ) -> Result<(), Error> {
+        info!("{:?}: tx {:?}", self.proto.protocol(), Code::TerminateReq);
         let mut p = PacketWriter::new();
         p.append(reason)?;
         p.write(w, self.proto.protocol(), Code::TerminateReq, self.next_id())
     }
 
     fn send_terminate_ack(&mut self, id: u8, w: &mut FrameWriter<'_>) -> Result<(), Error> {
+        info!("{:?}: tx {:?}", self.proto.protocol(), Code::TerminateAck);
         let mut p = PacketWriter::new();
         p.write(w, self.proto.protocol(), Code::TerminateAck, id)
     }
 
     fn send_code_reject(&mut self, pkt: &[u8], w: &mut FrameWriter<'_>) -> Result<(), Error> {
+        info!("{:?}: tx {:?}", self.proto.protocol(), Code::CodeRej);
         let mut p = PacketWriter::new();
         p.append(&pkt[2..])?; // don't include proto
         p.write(w, self.proto.protocol(), Code::CodeRej, self.next_id())
     }
 
     fn send_echo_response(&mut self, pkt: &mut [u8], w: &mut FrameWriter<'_>) -> Result<(), Error> {
+        info!("{:?}: tx {:?}", self.proto.protocol(), Code::EchoReply);
         pkt[2] = Code::EchoReply.into();
         w.start()?;
         w.append(pkt)?;
@@ -224,12 +251,17 @@ impl<P: Protocol> StateMachine<P> {
         let mut p = PacketWriter::new();
         let mut code = Code::ConfigureAck;
 
+        if pkt.len() < 6 {
+            return Err(Error::TooShort);
+        }
+        let pkt = &pkt[6..]; // skip header
+
         self.proto.peer_options_start();
-        parse_options(pkt, |ocode, data| {
-            let (ret_code, data) = match self.proto.peer_option_received(ocode, data) {
-                Verdict::Ack => (Code::ConfigureAck, data),
+        parse_options(pkt, |ocode, odata| {
+            let (ret_code, data) = match self.proto.peer_option_received(ocode, odata) {
+                Verdict::Ack => (Code::ConfigureAck, odata),
                 Verdict::Nack(data) => (Code::ConfigureNack, data),
-                Verdict::Rej => (Code::ConfigureRej, data),
+                Verdict::Rej => (Code::ConfigureRej, odata),
             };
 
             if code < ret_code {
@@ -244,6 +276,16 @@ impl<P: Protocol> StateMachine<P> {
             Ok(())
         })?;
 
+        info!("{:?}: tx {:?}", self.proto.protocol(), code);
+        parse_options(p.get_buf(), |code, data| {
+            log::info!(
+                "{:?}: tx option {:x} {:x?}",
+                self.proto.protocol(),
+                code,
+                data
+            );
+            Ok(())
+        })?;
         p.write(w, self.proto.protocol(), code, id)?;
         Ok(code == Code::ConfigureAck)
     }
@@ -253,11 +295,6 @@ fn parse_options(
     mut pkt: &[u8],
     mut f: impl FnMut(u8, &[u8]) -> Result<(), Error>,
 ) -> Result<(), Error> {
-    if pkt.len() < 6 {
-        return Err(Error::TooShort);
-    }
-    pkt = &pkt[6..]; // skip header
-
     while pkt.len() != 0 {
         if pkt.len() < 2 {
             return Err(Error::TooShort);

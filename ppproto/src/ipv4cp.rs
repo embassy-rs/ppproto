@@ -110,7 +110,7 @@ impl Protocol for IPv4CP {
 
     fn peer_option_received(&mut self, code: u8, data: &[u8]) -> Verdict {
         let opt = OptionCode::from(code);
-        log::info!("IPv4CP option {:x} {:?} {:x?}", code, opt, data);
+        log::info!("IPv4CP: rx option {:x} {:?} {:x?}", code, opt, data);
         match opt {
             OptionCode::IpAddress => {
                 if data.len() == 4 {

@@ -64,7 +64,7 @@ impl PAP {
         }
         let _pkt = &mut pkt[..len + 2];
 
-        log::info!("pap {:?} {:?}", code, self.state);
+        log::info!("PAP: rx {:?}", code);
         let old_state = self.state;
         match (code, self.state) {
             (Code::ConfigureAck, State::ReqSent) => self.state = State::Opened,
@@ -73,7 +73,7 @@ impl PAP {
         }
 
         if old_state != self.state {
-            log::info!("PPP PAP state {:?} -> {:?}", old_state, self.state);
+            log::info!("PAP: state {:?} -> {:?}", old_state, self.state);
         }
 
         Ok(())
@@ -85,6 +85,8 @@ impl PAP {
     }
 
     fn send_configure_request(&mut self, w: &mut FrameWriter<'_>) -> Result<(), Error> {
+        log::info!("PAP: tx {:?}", Code::ConfigureReq);
+
         let mut p = PacketWriter::new();
         p.append(&[self.username.len() as u8])?;
         p.append(self.username)?;

@@ -10,7 +10,9 @@ use super::ProtocolType;
 enum Option {
     #[num_enum(default)]
     Unknown = 0,
+    Asyncmap = 2,
     Auth = 3,
+    Magic = 5,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -21,12 +23,16 @@ pub enum AuthType {
 
 pub(crate) struct LCP {
     pub auth: AuthType,
+    pub asyncmap: u32,
+    pub magic: u32,
 }
 
 impl LCP {
     pub fn new() -> Self {
         Self {
             auth: AuthType::None,
+            asyncmap: 0xFFFFFFFF,
+            magic: 0x00000000,
         }
     }
 }
@@ -42,9 +48,11 @@ impl Protocol for LCP {
 
     fn peer_option_received(&mut self, code: u8, data: &[u8]) -> Verdict {
         let opt = Option::from(code);
-        log::info!("LCP option {:x} {:?} {:x?}", code, opt, data);
+        log::info!("LCP: rx option {:x} {:?} {:x?}", code, opt, data);
         match opt {
             Option::Unknown => Verdict::Rej,
+            Option::Asyncmap => Verdict::Ack,
+            Option::Magic => Verdict::Ack,
             Option::Auth => {
                 if data.len() != 2 || data != &[0xc0, 0x23] {
                     return Verdict::Nack(&[0xc0, 0x23]);
@@ -55,7 +63,9 @@ impl Protocol for LCP {
         }
     }
 
-    fn own_options(&mut self, _p: &mut PacketWriter) -> Result<(), Error> {
+    fn own_options(&mut self, p: &mut PacketWriter) -> Result<(), Error> {
+        p.append_option(Option::Asyncmap.into(), &[0x00, 0x00, 0x00, 0x00])?;
+        p.append_option(Option::Magic.into(), &[0x12, 0x34, 0x56, 0x78])?;
         Ok(())
     }
     fn own_option_nacked(&mut self, _code: u8, _data: &[u8], _is_rej: bool) {}

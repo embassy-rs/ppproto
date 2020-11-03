@@ -1,16 +1,8 @@
-cargo-features = ["resolver"]
-
 [workspace]
-resolver = "2"
 members = [
     "ppproto",
     "example",
 ]
 
-exclude = [
-    "third_party",
-]
-
 [patch.crates-io]
 smoltcp = { git = "https://github.com/akiles/smoltcp", branch="master"}
-#smoltcp = { path = "third_party/smoltcp" }

@@ -36,6 +36,10 @@ impl PacketWriter {
         Ok(())
     }
 
+    pub fn get_buf(&self) -> &[u8] {
+        &self.buf[..self.len]
+    }
+
     pub fn write(
         &mut self,
         w: &mut FrameWriter<'_>,

@@ -12,3 +12,5 @@ managed = { version = "0.8.0", default-features = false }
 env_logger = "0.7.1"
 smoltcp = "0.6.0"
 log = "0.4.11"
+futures            = { version = "0.3.5" }
+async-io = "1.1.10"

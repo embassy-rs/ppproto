@@ -17,7 +17,6 @@ fn main() {
     env_logger::init();
 
     let opts: Opts = Opts::parse();
-
     let mut port = SerialPort::new(Path::new(&opts.device)).unwrap();
 
     let mut rx_buf = [0; 2048];

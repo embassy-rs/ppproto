@@ -99,7 +99,7 @@ impl<'a> PPP<'a> {
             frame_reader: FrameReader::new(rx_buf),
             phase: Phase::Dead,
             lcp: StateMachine::new(LCP::new()),
-            pap: PAP::new(b"myuser", b"mypass"),
+            pap: PAP::new(b"orange", b"orange"),
             ipv4cp: StateMachine::new(IPv4CP::new()),
         }
     }

@@ -23,6 +23,21 @@ RUST_LOG=trace cargo run --bin simple -- --device pty2
 ping 192.168.7.10
 ```
 
+## Testing against a real modem
+
+- `minicom -D /dev/ttyUSB0 -b 115200`
+- put whatever AT commands you need to connect (such as `ATD*99#`)
+- Control+A Q
+- RUST_LOG=trace cargo run --bin simple -- --device /dev/ttyUSB0
+
+If you want to "MITM" the serial communications to see the raw bytes coming and going, you can do this:
+
+```
+socat -v -x /dev/ttyUSB0 PTY,link=pty,rawer
+```
+
+and then use `$PWD/pty` instead of `/dev/ttyUSB0`
+
 ## License
 
 This work is licensed under either of
