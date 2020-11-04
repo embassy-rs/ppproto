@@ -1,3 +1,4 @@
+use anyfmt::*;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use super::options::{Protocol, Verdict};
@@ -7,6 +8,7 @@ use super::{Error, ProtocolType};
 use smoltcp::wire::Ipv4Address;
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 enum OptionCode {
     #[num_enum(default)]
@@ -61,6 +63,7 @@ impl IpOption {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Ipv4Config {
     pub address: Option<Ipv4Address>,
     pub peer_address: Option<Ipv4Address>,
@@ -110,7 +113,7 @@ impl Protocol for IPv4CP {
 
     fn peer_option_received(&mut self, code: u8, data: &[u8]) -> Verdict {
         let opt = OptionCode::from(code);
-        log::info!("IPv4CP: rx option {:x} {:?} {:x?}", code, opt, data);
+        trace!("IPv4CP: rx option {:?} {:?} {:?}", code, opt, data);
         match opt {
             OptionCode::IpAddress => {
                 if data.len() == 4 {
@@ -133,7 +136,7 @@ impl Protocol for IPv4CP {
 
     fn own_option_nacked(&mut self, code: u8, data: &[u8], is_rej: bool) {
         let opt = OptionCode::from(code);
-        log::info!("IPv4CP nak {:x} {:?} {:x?} {}", code, opt, data, is_rej);
+        trace!("IPv4CP nak {:?} {:?} {:?} {:?}", code, opt, data, is_rej);
         match opt {
             OptionCode::Unknown => {}
             OptionCode::IpAddress => self.address.nacked(data, is_rej),

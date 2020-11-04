@@ -1,3 +1,4 @@
+use anyfmt::{assert, *};
 use core::convert::TryInto;
 
 use super::frame_writer::FrameWriter;
@@ -5,6 +6,7 @@ use super::packet_writer::PacketWriter;
 use super::{Code, Error, ProtocolType};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum State {
     Closed,
     ReqSent,
@@ -52,19 +54,19 @@ impl PAP {
 
     pub fn handle(&mut self, pkt: &mut [u8], w: &mut FrameWriter<'_>) -> Result<(), Error> {
         if pkt.len() < 6 {
-            log::info!("warn: too short");
+            info!("warn: too short");
             return Err(Error::TooShort);
         }
         let code = Code::from(pkt[2]);
         let _id = pkt[3];
         let len = u16::from_be_bytes(pkt[4..6].try_into().unwrap()) as usize;
         if len > pkt.len() {
-            log::info!("warn: len too short");
+            info!("warn: len too short");
             return Err(Error::TooShort);
         }
         let _pkt = &mut pkt[..len + 2];
 
-        log::info!("PAP: rx {:?}", code);
+        info!("PAP: rx {:?}", code);
         let old_state = self.state;
         match (code, self.state) {
             (Code::ConfigureAck, State::ReqSent) => self.state = State::Opened,
@@ -73,7 +75,7 @@ impl PAP {
         }
 
         if old_state != self.state {
-            log::info!("PAP: state {:?} -> {:?}", old_state, self.state);
+            info!("PAP: state {:?} -> {:?}", old_state, self.state);
         }
 
         Ok(())
@@ -85,7 +87,7 @@ impl PAP {
     }
 
     fn send_configure_request(&mut self, w: &mut FrameWriter<'_>) -> Result<(), Error> {
-        log::info!("PAP: tx {:?}", Code::ConfigureReq);
+        info!("PAP: tx {:?}", Code::ConfigureReq);
 
         let mut p = PacketWriter::new();
         p.append(&[self.username.len() as u8])?;

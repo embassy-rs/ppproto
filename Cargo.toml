@@ -6,3 +6,5 @@ members = [
 
 [patch.crates-io]
 smoltcp = { git = "https://github.com/akiles/smoltcp", branch="master"}
+anyfmt = { git = "https://github.com/akiles/embassy" }
+defmt = { git = "https://github.com/knurling-rs/defmt", branch="main" }

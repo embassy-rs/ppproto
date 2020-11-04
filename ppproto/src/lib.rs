@@ -9,6 +9,7 @@ mod options;
 mod packet_writer;
 mod pap;
 
+use anyfmt::{panic, *};
 use core::convert::TryInto;
 use core::marker::PhantomData;
 use num_enum::{FromPrimitive, IntoPrimitive};
@@ -23,6 +24,7 @@ use self::pap::{State as PAPState, PAP};
 pub use ipv4cp::Ipv4Config;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error {
     TooShort,
     Invalid,
@@ -32,6 +34,7 @@ pub enum Error {
 }
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u16)]
 pub(crate) enum ProtocolType {
     #[num_enum(default)]
@@ -47,6 +50,7 @@ pub(crate) enum ProtocolType {
 }
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub(crate) enum Code {
     #[num_enum(default)]
@@ -65,6 +69,7 @@ pub(crate) enum Code {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 enum Phase {
     Dead,
     Establish,
@@ -88,6 +93,7 @@ pub struct PPP<'a> {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Config {
     /// IPv4 configuration obtained from IPv4CP. None if IPv4CP is not up.
     pub ipv4: Option<Ipv4Config>,
@@ -205,7 +211,7 @@ impl<'a> PPP<'a> {
         }
 
         if old_phase != self.phase {
-            log::info!("PPP link phase {:?} -> {:?}", old_phase, self.phase);
+            info!("PPP link phase {:?} -> {:?}", old_phase, self.phase);
         }
 
         let r = ww.get();

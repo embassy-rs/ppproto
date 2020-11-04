@@ -10,6 +10,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyfmt"
+version = "0.1.0"
+source = "git+https://github.com/akiles/embassy#b40e09d502208b8c9fe2d35c63065bb82417ff89"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "async-io"
 version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -124,6 +132,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "defmt"
+version = "0.1.0"
+source = "git+https://github.com/knurling-rs/defmt?branch=main#ba78c540d9a89dd3e7eca55dcab50f04bcdfb1c4"
+dependencies = [
+ "defmt-macros",
+ "semver",
+]
+
+[[package]]
+name = "defmt-macros"
+version = "0.1.0"
+source = "git+https://github.com/knurling-rs/defmt?branch=main#ba78c540d9a89dd3e7eca55dcab50f04bcdfb1c4"
+dependencies = [
+ "defmt-parser",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "defmt-parser"
+version = "0.1.0"
+source = "git+https://github.com/knurling-rs/defmt?branch=main#ba78c540d9a89dd3e7eca55dcab50f04bcdfb1c4"
+
+[[package]]
 name = "derivative"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -151,6 +184,7 @@ dependencies = [
 name = "example"
 version = "0.1.0"
 dependencies = [
+ "anyfmt",
  "async-io",
  "clap",
  "env_logger",
@@ -410,7 +444,6 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c0fd9eba1d5db0994a239e09c1be402d35622277e35468ba891aa5e3188ce7e"
 dependencies = [
- "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -433,6 +466,15 @@ name = "parking"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
+
+[[package]]
+name = "pest"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10f4872ae94d7b90ae48754df22fd42ad52ce740b8f370b03da4835417403e53"
+dependencies = [
+ "ucd-trie",
+]
 
 [[package]]
 name = "pin-project"
@@ -483,18 +525,10 @@ dependencies = [
 name = "ppproto"
 version = "0.1.0"
 dependencies = [
- "log",
+ "anyfmt",
+ "defmt",
  "num_enum",
  "smoltcp",
-]
-
-[[package]]
-name = "proc-macro-crate"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d6ea3c4595b96363c13943497db34af4460fb474a95c43f4446ad341b8c9785"
-dependencies = [
- "toml",
 ]
 
 [[package]]
@@ -576,10 +610,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b181ba2dcf07aaccad5448e8ead58db5b742cf85dfe035e2227f137a539a189"
 
 [[package]]
-name = "serde"
-version = "1.0.117"
+name = "semver"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b88fa983de7720629c9387e9f517353ed404164b1e482c970a90c1a4aaf7dc1a"
+checksum = "f301af10236f6df4160f7c3f04eec6dbc70ace82d23326abad5edee88801c6b6"
+dependencies = [
+ "semver-parser",
+]
+
+[[package]]
+name = "semver-parser"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42ef146c2ad5e5f4b037cd6ce2ebb775401729b19a82040c1beac9d36c7d1428"
+dependencies = [
+ "pest",
+]
 
 [[package]]
 name = "slab"
@@ -644,13 +690,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml"
-version = "0.5.7"
+name = "ucd-trie"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75cf45bb0bef80604d001caaec0d09da99611b3c0fd39d3080468875cdb65645"
-dependencies = [
- "serde",
-]
+checksum = "56dee185309b50d1f11bfedef0fe6d036842e3fb77413abef29f8f8d1c5d4c1c"
 
 [[package]]
 name = "unicode-segmentation"

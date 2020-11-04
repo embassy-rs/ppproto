@@ -1,3 +1,4 @@
+use anyfmt::*;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use super::options::{Protocol, Verdict};
@@ -6,6 +7,7 @@ use super::Error;
 use super::ProtocolType;
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 enum Option {
     #[num_enum(default)]
@@ -16,6 +18,7 @@ enum Option {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum AuthType {
     None = 0,
     PAP = 0xc023,
@@ -48,7 +51,7 @@ impl Protocol for LCP {
 
     fn peer_option_received(&mut self, code: u8, data: &[u8]) -> Verdict {
         let opt = Option::from(code);
-        log::info!("LCP: rx option {:x} {:?} {:x?}", code, opt, data);
+        trace!("LCP: rx option {:?} {:?} {:?}", code, opt, data);
         match opt {
             Option::Unknown => Verdict::Rej,
             Option::Asyncmap => Verdict::Ack,

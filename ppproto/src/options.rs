@@ -1,12 +1,12 @@
+use anyfmt::{panic, *};
 use core::convert::TryInto;
 
 use super::frame_writer::FrameWriter;
 use super::packet_writer::PacketWriter;
 use super::{Code, Error, ProtocolType};
 
-use log::info;
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub(crate) enum Verdict<'a> {
     Ack,
     Nack(&'a [u8]),
@@ -24,6 +24,7 @@ pub(crate) trait Protocol {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub(crate) enum State {
     Closed,
     ReqSent,
@@ -94,7 +95,7 @@ impl<P: Protocol> StateMachine<P> {
         match (code, self.state) {
             // reply EchoReq on state Opened, ignore in all other states (including Closed!)
             (Code::EchoReq, State::Opened) => self.send_echo_response(pkt, w)?,
-            (Code::EchoReq, x) => info!("WARNING: unexpected EchoReq in state {:?}", x),
+            (Code::EchoReq, x) => info!("ignoring unexpected EchoReq in state {:?}", x),
 
             // DiscardReqs are, well, discarded.
             (Code::DiscardReq, _) => {}
@@ -160,7 +161,10 @@ impl<P: Protocol> StateMachine<P> {
                 self.state = State::ReqSent;
             }
 
-            x => info!("WARNING: unexpected packet {:?} state {:?}", x, self.state),
+            x => info!(
+                "ignoring unexpected packet {:?} in state {:?}",
+                x, self.state
+            ),
         }
 
         if old_state != self.state {
@@ -186,8 +190,8 @@ impl<P: Protocol> StateMachine<P> {
 
         info!("{:?}: tx {:?}", self.proto.protocol(), Code::ConfigureReq);
         parse_options(p.get_buf(), |code, data| {
-            log::info!(
-                "{:?}: tx option {:x} {:x?}",
+            trace!(
+                "{:?}: tx option {:?} {:?}",
                 self.proto.protocol(),
                 code,
                 data
@@ -278,8 +282,8 @@ impl<P: Protocol> StateMachine<P> {
 
         info!("{:?}: tx {:?}", self.proto.protocol(), code);
         parse_options(p.get_buf(), |code, data| {
-            log::info!(
-                "{:?}: tx option {:x} {:x?}",
+            trace!(
+                "{:?}: tx option {:?} {:?}",
                 self.proto.protocol(),
                 code,
                 data
