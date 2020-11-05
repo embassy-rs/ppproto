@@ -3,15 +3,12 @@ mod serial_port;
 
 use clap::Clap;
 use managed::ManagedSlice;
-use ppproto::{Action, Error, Sender, PPP};
-use serial_port::SerialPort;
-use std::io::{Read, Write};
-use std::mem;
-use std::path::Path;
-
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
+use std::io::{Read, Write};
+use std::mem;
 use std::os::unix::io::AsRawFd;
+use std::path::Path;
 use std::str;
 
 use log::*;
@@ -24,6 +21,9 @@ use smoltcp::socket::{UdpPacketMetadata, UdpSocket, UdpSocketBuffer};
 use smoltcp::time::{Duration, Instant};
 use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr, Ipv4Address};
 use smoltcp::Result;
+
+use ppproto::{Action, Config, Error, Sender, PPP};
+use serial_port::SerialPort;
 
 #[derive(Clap)]
 struct Opts {
@@ -153,7 +153,12 @@ fn main() {
     let mut port = SerialPort::new(Path::new(&opts.device)).unwrap();
     let fd = port.as_raw_fd();
 
-    let mut ppp = PPP::new(unsafe { &mut rx_buf });
+    let config = Config {
+        username: b"myuser",
+        password: b"mypass",
+    };
+
+    let mut ppp = PPP::new(config, unsafe { &mut rx_buf });
     ppp.open().unwrap();
 
     let mut device = PPPDevice::new(ppp, port);
@@ -199,9 +204,9 @@ fn main() {
             }
         }
 
-        let config = iface.device().ppp.config();
+        let status = iface.device().ppp.status();
 
-        if let Some(ipv4) = config.ipv4 {
+        if let Some(ipv4) = status.ipv4 {
             if let Some(want_addr) = ipv4.address {
                 iface.update_ip_addrs(|addrs| {
                     let addr = &mut addrs[0];

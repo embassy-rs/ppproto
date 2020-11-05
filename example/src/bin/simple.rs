@@ -2,10 +2,11 @@
 mod serial_port;
 
 use clap::Clap;
-use ppproto::{Action, Error, PPP};
-use serial_port::SerialPort;
 use std::io::{Read, Write};
 use std::path::Path;
+
+use ppproto::{Action, Config, Error, PPP};
+use serial_port::SerialPort;
 
 #[derive(Clap)]
 struct Opts {
@@ -19,8 +20,13 @@ fn main() {
     let opts: Opts = Opts::parse();
     let mut port = SerialPort::new(Path::new(&opts.device)).unwrap();
 
+    let config = Config {
+        username: b"myuser",
+        password: b"mypass",
+    };
+
     let mut rx_buf = [0; 2048];
-    let mut ppp = PPP::new(&mut rx_buf);
+    let mut ppp = PPP::new(config, &mut rx_buf);
     ppp.open().unwrap();
 
     let mut tx_buf = [0; 2048];

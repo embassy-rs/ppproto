@@ -64,7 +64,7 @@ impl IpOption {
 
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct Ipv4Config {
+pub struct Ipv4Status {
     pub address: Option<Ipv4Address>,
     pub peer_address: Option<Ipv4Address>,
     pub dns_servers: [Option<Ipv4Address>; 2],
@@ -89,14 +89,14 @@ impl IPv4CP {
         }
     }
 
-    pub fn config(&self) -> Ipv4Config {
+    pub fn status(&self) -> Ipv4Status {
         let peer_address = if self.peer_address.is_unspecified() {
             None
         } else {
             Some(self.peer_address)
         };
 
-        Ipv4Config {
+        Ipv4Status {
             address: self.address.get(),
             peer_address,
             dns_servers: [self.dns_server_1.get(), self.dns_server_2.get()],

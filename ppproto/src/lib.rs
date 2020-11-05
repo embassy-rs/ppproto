@@ -21,7 +21,7 @@ use self::lcp::{AuthType, LCP};
 use self::options::{State, StateMachine};
 use self::pap::{State as PAPState, PAP};
 
-pub use ipv4cp::Ipv4Config;
+pub use ipv4cp::Ipv4Status;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -84,36 +84,41 @@ pub enum Action<'a, 'b> {
     Transmit(&'b mut [u8]),
 }
 
+pub struct Config<'a> {
+    pub username: &'a [u8],
+    pub password: &'a [u8],
+}
+
 pub struct PPP<'a> {
     frame_reader: FrameReader<'a>,
     phase: Phase,
     lcp: StateMachine<LCP>,
-    pap: PAP,
+    pap: PAP<'a>,
     ipv4cp: StateMachine<IPv4CP>,
 }
 
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct Config {
+pub struct Status {
     /// IPv4 configuration obtained from IPv4CP. None if IPv4CP is not up.
-    pub ipv4: Option<Ipv4Config>,
+    pub ipv4: Option<Ipv4Status>,
 }
 
 impl<'a> PPP<'a> {
-    pub fn new(rx_buf: &'a mut [u8]) -> Self {
+    pub fn new(config: Config<'a>, rx_buf: &'a mut [u8]) -> Self {
         Self {
             frame_reader: FrameReader::new(rx_buf),
             phase: Phase::Dead,
             lcp: StateMachine::new(LCP::new()),
-            pap: PAP::new(b"orange", b"orange"),
+            pap: PAP::new(config.username, config.password),
             ipv4cp: StateMachine::new(IPv4CP::new()),
         }
     }
 
-    pub fn config(&self) -> Config {
-        Config {
+    pub fn status(&self) -> Status {
+        Status {
             ipv4: if self.ipv4cp.state() == State::Opened {
-                Some(self.ipv4cp.proto().config())
+                Some(self.ipv4cp.proto().status())
             } else {
                 None
             },

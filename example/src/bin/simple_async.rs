@@ -5,11 +5,12 @@ use async_io::Async;
 use clap::Clap;
 use futures::io::BufReader;
 use futures::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt};
-use ppproto::{Action, Error, PPP};
-use serial_port::SerialPort;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::pin::Pin;
+
+use ppproto::{Action, Config, Error, PPP};
+use serial_port::SerialPort;
 
 #[derive(Clap)]
 struct Opts {
@@ -24,8 +25,13 @@ async fn run_main() {
     let s = Async::new(s).unwrap();
     let mut s = BufReader::new(s);
 
+    let config = Config {
+        username: b"myuser",
+        password: b"mypass",
+    };
+
     let mut rx_buf = [0; 2048];
-    let mut ppp = PPP::new(&mut rx_buf);
+    let mut ppp = PPP::new(config, &mut rx_buf);
     ppp.open().unwrap();
 
     let mut tx_buf = [0; 2048];

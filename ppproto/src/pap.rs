@@ -12,16 +12,16 @@ pub enum State {
     ReqSent,
     Opened,
 }
-pub struct PAP {
+pub struct PAP<'a> {
     state: State,
     id: u8,
 
-    username: &'static [u8],
-    password: &'static [u8],
+    username: &'a [u8],
+    password: &'a [u8],
 }
 
-impl PAP {
-    pub fn new(username: &'static [u8], password: &'static [u8]) -> Self {
+impl<'a> PAP<'a> {
+    pub fn new(username: &'a [u8], password: &'a [u8]) -> Self {
         assert!(username.len() <= u8::MAX as usize);
         assert!(password.len() <= u8::MAX as usize);
         Self {
