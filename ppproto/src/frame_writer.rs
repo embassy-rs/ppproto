@@ -5,6 +5,7 @@ pub struct FrameWriter<'a> {
     buf: &'a mut [u8],
     len: usize,
     crc: u16,
+    asyncmap: u32,
 }
 
 impl<'a> FrameWriter<'a> {
@@ -13,6 +14,16 @@ impl<'a> FrameWriter<'a> {
             buf,
             len: 0,
             crc: 0,
+            asyncmap: 0xFFFFFFFF,
+        }
+    }
+
+    pub fn new_with_asyncmap(buf: &'a mut [u8], asyncmap: u32) -> Self {
+        Self {
+            buf,
+            len: 0,
+            crc: 0,
+            asyncmap,
         }
     }
 
@@ -22,7 +33,8 @@ impl<'a> FrameWriter<'a> {
 
     pub fn start(&mut self) -> Result<(), Error> {
         self.crc = crc16(0xFFFF, &[0xFF, 0x03]);
-        self.append_raw(&[0x7e, 0xff, 0x7d, 0x23])?;
+        self.append_raw(&[0x7e, 0xff])?;
+        self.append_escaped(&[0x03])?;
 
         Ok(())
     }
@@ -47,9 +59,17 @@ impl<'a> FrameWriter<'a> {
 
     fn append_escaped(&mut self, data: &[u8]) -> Result<(), Error> {
         for &b in data {
-            match b {
-                0..=0x1f | 0x7d | 0x7e => self.append_raw(&[0x7d, b ^ 0x20])?,
-                _ => self.append_raw(&[b])?,
+            let escape = match b {
+                0..=0x1f => self.asyncmap & (1 << (b as u32)) != 0,
+                0x7d => true,
+                0x7e => true,
+                _ => false,
+            };
+
+            if escape {
+                self.append_raw(&[0x7d, b ^ 0x20])?;
+            } else {
+                self.append_raw(&[b])?;
             }
         }
         Ok(())

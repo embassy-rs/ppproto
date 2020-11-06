@@ -258,7 +258,7 @@ impl<'a> Sender<'a> {
     pub fn send<'b>(&mut self, pkt: &[u8], tx_buf: &'b mut [u8]) -> Result<&'b mut [u8], Error> {
         // TODO check IPv4CP is up
 
-        let mut w = FrameWriter::new(tx_buf);
+        let mut w = FrameWriter::new_with_asyncmap(tx_buf, self.lcp.proto().asyncmap_remote);
         let proto: u16 = ProtocolType::IPv4.into();
         w.start()?;
         w.append(&proto.to_be_bytes())?;
