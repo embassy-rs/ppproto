@@ -10,8 +10,10 @@ mod packet_writer;
 mod pap;
 
 use anyfmt::{panic, *};
+use as_slice::AsMutSlice;
 use core::convert::TryInto;
 use core::marker::PhantomData;
+use core::ops::Range;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use self::frame_reader::FrameReader;
@@ -78,10 +80,10 @@ enum Phase {
     Open,
 }
 
-pub enum Action<'a, 'b> {
+pub enum Action<B> {
     None,
-    Received(&'a mut [u8], Sender<'a>),
-    Transmit(&'b mut [u8]),
+    Received(B, Range<usize>),
+    Transmit(usize),
 }
 
 pub struct Config<'a> {
@@ -89,8 +91,10 @@ pub struct Config<'a> {
     pub password: &'a [u8],
 }
 
-pub struct PPP<'a> {
-    frame_reader: FrameReader<'a>,
+pub struct PPP<'a, B: AsMutSlice<Element = u8>> {
+    frame_reader: FrameReader,
+    rx_buf: Option<B>,
+
     phase: Phase,
     lcp: StateMachine<LCP>,
     pap: PAP<'a>,
@@ -104,15 +108,29 @@ pub struct Status {
     pub ipv4: Option<Ipv4Status>,
 }
 
-impl<'a> PPP<'a> {
-    pub fn new(config: Config<'a>, rx_buf: &'a mut [u8]) -> Self {
+impl<'a, B: AsMutSlice<Element = u8>> PPP<'a, B> {
+    pub fn new(config: Config<'a>) -> Self {
         Self {
-            frame_reader: FrameReader::new(rx_buf),
+            frame_reader: FrameReader::new(),
+            rx_buf: None,
+
             phase: Phase::Dead,
             lcp: StateMachine::new(LCP::new()),
             pap: PAP::new(config.username, config.password),
             ipv4cp: StateMachine::new(IPv4CP::new()),
         }
+    }
+
+    pub fn has_rx_buf(&self) -> bool {
+        self.rx_buf.is_some()
+    }
+
+    pub fn put_rx_buf(&mut self, rx_buf: B) {
+        if self.rx_buf.is_some() {
+            panic!("called put_rx_buf when we already have a buffer.")
+        }
+
+        self.rx_buf = Some(rx_buf)
     }
 
     pub fn status(&self) -> Status {
@@ -138,17 +156,19 @@ impl<'a> PPP<'a> {
     /// Process received data and generate data to be send.
     ///
     /// Action::Received is returned when an IP packet is received. You must then pass the packet
-    /// to higher layers for processing. A Sender is also returned to allow sending outgoing
-    /// packets while keeping the borrow of the incoming packet.
+    /// to higher layers for processing.
     ///
     /// You must provide buffer space for data to be transmitted, and transmit the returned slice
     /// over the serial connection if Action::Transmit is returned.
-    pub fn poll<'b, 'c>(&'b mut self, tx_buf: &'c mut [u8]) -> Result<Action<'b, 'c>, Error> {
+    pub fn poll(&mut self, tx_buf: &mut [u8]) -> Result<Action<B>, Error> {
         let mut ww = FrameWriter::new(tx_buf);
         let w = &mut ww;
 
+        let buf = expect!(self.rx_buf.as_mut(), "called poll() without an rx_buf").as_mut_slice();
+
         // Handle input
-        if let Some(pkt) = self.frame_reader.receive() {
+        if let Some(range) = self.frame_reader.receive() {
+            let pkt = &mut buf[range.clone()];
             let proto = u16::from_be_bytes(pkt[0..2].try_into().unwrap());
 
             match proto.into() {
@@ -156,10 +176,8 @@ impl<'a> PPP<'a> {
                 ProtocolType::PAP => self.pap.handle(pkt, w)?,
                 ProtocolType::IPv4 => {
                     return Ok(Action::Received(
-                        &mut pkt[2..],
-                        Sender {
-                            phantom: PhantomData,
-                        },
+                        self.rx_buf.take().unwrap(),
+                        (range.start + 2)..range.end,
                     ))
                 }
                 ProtocolType::IPv4CP => self.ipv4cp.handle(pkt, w)?,
@@ -219,19 +237,28 @@ impl<'a> PPP<'a> {
             info!("PPP link phase {:?} -> {:?}", old_phase, self.phase);
         }
 
-        let r = ww.get();
-        if r.len() == 0 {
+        let r = ww.len();
+        if r == 0 {
             Ok(Action::None)
         } else {
             Ok(Action::Transmit(r))
         }
     }
 
-    /// Get a Sender object.
-    pub fn sender(&mut self) -> Sender<'_> {
-        Sender {
-            phantom: PhantomData,
-        }
+    /// Send an IP packet.
+    ///
+    /// You must provide buffer space for the data to be transmitted, and transmit the returned
+    /// slice over the serial connection.
+    pub fn send(&mut self, pkt: &[u8], tx_buf: &mut [u8]) -> Result<usize, Error> {
+        // TODO check IPv4CP is up
+
+        let mut w = FrameWriter::new_with_asyncmap(tx_buf, self.lcp.proto().asyncmap_remote);
+        let proto: u16 = ProtocolType::IPv4.into();
+        w.start()?;
+        w.append(&proto.to_be_bytes())?;
+        w.append(pkt)?;
+        w.finish()?;
+        Ok(w.len())
     }
 
     /// Consume data received from the serial connection.
@@ -241,29 +268,7 @@ impl<'a> PPP<'a> {
     /// Returns how many bytes were actually consumed. If less than `data.len()`, `consume`
     /// must be called again with the remaining data.
     pub fn consume(&mut self, data: &[u8]) -> usize {
-        self.frame_reader.consume(data)
-    }
-}
-
-/// Sender can be used to send IP packets over a PPP connection.
-pub struct Sender<'a> {
-    phantom: PhantomData<&'a mut ()>,
-}
-
-impl<'a> Sender<'a> {
-    /// Send an IP packet.
-    ///
-    /// You must provide buffer space for the data to be transmitted, and transmit the returned
-    /// slice over the serial connection.
-    pub fn send<'b>(&mut self, pkt: &[u8], tx_buf: &'b mut [u8]) -> Result<&'b mut [u8], Error> {
-        // TODO check IPv4CP is up
-
-        let mut w = FrameWriter::new_with_asyncmap(tx_buf, self.lcp.proto().asyncmap_remote);
-        let proto: u16 = ProtocolType::IPv4.into();
-        w.start()?;
-        w.append(&proto.to_be_bytes())?;
-        w.append(pkt)?;
-        w.finish()?;
-        Ok(w.get())
+        let buf = expect!(self.rx_buf.as_mut(), "called consume() without an rx_buf");
+        self.frame_reader.consume(buf.as_mut_slice(), data)
     }
 }

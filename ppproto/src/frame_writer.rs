@@ -27,8 +27,8 @@ impl<'a> FrameWriter<'a> {
         }
     }
 
-    pub fn get(self) -> &'a mut [u8] {
-        &mut self.buf[..self.len]
+    pub fn len(self) -> usize {
+        self.len
     }
 
     pub fn start(&mut self) -> Result<(), Error> {

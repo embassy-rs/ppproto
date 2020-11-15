@@ -143,8 +143,6 @@ impl<'a> TxToken for PPPTxToken<'a> {
     }
 }
 
-static mut rx_buf: [u8; 2048] = [0; 2048];
-
 fn main() {
     env_logger::init();
 
@@ -157,8 +155,11 @@ fn main() {
         username: b"myuser",
         password: b"mypass",
     };
+    let mut ppp = PPP::new(config);
 
-    let mut ppp = PPP::new(config, unsafe { &mut rx_buf });
+    let mut rx_buf = [0; 2048];
+    ppp.put_rx_buf(&mut rx_buf);
+
     ppp.open().unwrap();
 
     let mut device = PPPDevice::new(ppp, port);

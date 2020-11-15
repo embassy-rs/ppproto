@@ -24,9 +24,11 @@ fn main() {
         username: b"myuser",
         password: b"mypass",
     };
+    let mut ppp = PPP::new(config);
 
     let mut rx_buf = [0; 2048];
-    let mut ppp = PPP::new(config, &mut rx_buf);
+    ppp.put_rx_buf(&mut rx_buf);
+
     ppp.open().unwrap();
 
     let mut tx_buf = [0; 2048];
@@ -38,7 +40,8 @@ fn main() {
         match ppp.poll(&mut tx_buf).unwrap() {
             Action::None => {}
             Action::Transmit(x) => port.write_all(x).unwrap(),
-            Action::Received(pkt, mut sender) => {
+            Action::Received(rx_buf, range) => {
+                let pkt = &mut rx_buf[range];
                 log::info!("received packet: {:x?}", pkt);
 
                 // Toy code to reply to pings with no error handling whatsoever.
@@ -70,12 +73,14 @@ fn main() {
                         pkt[16..20].copy_from_slice(&src_addr);
 
                         // Send it!
-                        let x = sender.send(&pkt, &mut tx_buf).unwrap();
+                        let x = ppp.send(&pkt, &mut tx_buf).unwrap();
                         port.write_all(x).unwrap();
 
                         log::info!("replied to ping!");
                     }
                 }
+
+                ppp.put_rx_buf(rx_buf);
             }
         }
 

@@ -31,7 +31,7 @@ async fn run_main() {
     };
 
     let mut rx_buf = [0; 2048];
-    let mut ppp = PPP::new(config, &mut rx_buf);
+    let mut ppp = PPP::new(config);
     ppp.open().unwrap();
 
     let mut tx_buf = [0; 2048];
