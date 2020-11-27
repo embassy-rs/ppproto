@@ -5,6 +5,4 @@ members = [
 ]
 
 [patch.crates-io]
-smoltcp = { git = "https://github.com/akiles/smoltcp", branch="master"}
-anyfmt = { git = "https://github.com/akiles/embassy" }
-defmt = { git = "https://github.com/knurling-rs/defmt", branch="main" }
+smoltcp = { git = "https://github.com/akiles/smoltcp", rev="d190cc1d801606c3834f4134e227e0b183028bc2"}

@@ -1,12 +1,11 @@
-use anyfmt::{assert, *};
 use core::convert::TryInto;
+use defmt::{assert, *};
 
 use super::frame_writer::FrameWriter;
 use super::packet_writer::PacketWriter;
 use super::{Code, Error, ProtocolType};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, defmt::Format)]
 pub enum State {
     Closed,
     ReqSent,

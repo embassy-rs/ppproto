@@ -1,12 +1,11 @@
-use anyfmt::{panic, *};
 use core::convert::TryInto;
+use defmt::{panic, unreachable, *};
 
 use super::frame_writer::FrameWriter;
 use super::packet_writer::PacketWriter;
 use super::{Code, Error, ProtocolType};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, defmt::Format)]
 pub(crate) enum Verdict<'a> {
     Ack,
     Nack(&'a [u8]),
@@ -23,8 +22,7 @@ pub(crate) trait Protocol {
     fn peer_option_received(&mut self, code: u8, data: &[u8]) -> Verdict;
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, defmt::Format)]
 pub(crate) enum State {
     Closed,
     ReqSent,

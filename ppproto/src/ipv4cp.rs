@@ -1,4 +1,4 @@
-use anyfmt::*;
+use defmt::*;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use super::options::{Protocol, Verdict};
@@ -7,8 +7,7 @@ use super::{Error, ProtocolType};
 
 use smoltcp::wire::Ipv4Address;
 
-#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, defmt::Format)]
 #[repr(u8)]
 enum OptionCode {
     #[num_enum(default)]
@@ -62,8 +61,7 @@ impl IpOption {
     }
 }
 
-#[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, defmt::Format)]
 pub struct Ipv4Status {
     pub address: Option<Ipv4Address>,
     pub peer_address: Option<Ipv4Address>,

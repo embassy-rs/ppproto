@@ -1,5 +1,5 @@
-use anyfmt::*;
 use core::convert::TryInto;
+use defmt::*;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use super::options::{Protocol, Verdict};
@@ -7,8 +7,7 @@ use super::packet_writer::PacketWriter;
 use super::Error;
 use super::ProtocolType;
 
-#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, defmt::Format)]
 #[repr(u8)]
 enum Option {
     #[num_enum(default)]
@@ -17,8 +16,7 @@ enum Option {
     Auth = 3,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, defmt::Format)]
 pub enum AuthType {
     None = 0,
     PAP = 0xc023,

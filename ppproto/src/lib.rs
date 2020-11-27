@@ -9,11 +9,11 @@ mod options;
 mod packet_writer;
 mod pap;
 
-use anyfmt::{panic, *};
 use as_slice::AsMutSlice;
 use core::convert::TryInto;
 use core::marker::PhantomData;
 use core::ops::Range;
+use defmt::{panic, *};
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use self::frame_reader::FrameReader;
@@ -25,8 +25,7 @@ use self::pap::{State as PAPState, PAP};
 
 pub use ipv4cp::Ipv4Status;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, defmt::Format)]
 pub enum Error {
     TooShort,
     Invalid,
@@ -35,8 +34,7 @@ pub enum Error {
     InvalidState,
 }
 
-#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, defmt::Format)]
 #[repr(u16)]
 pub(crate) enum ProtocolType {
     #[num_enum(default)]
@@ -51,8 +49,9 @@ pub(crate) enum ProtocolType {
     IPv4CP = 0x8021,
 }
 
-#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(
+    FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd, defmt::Format,
+)]
 #[repr(u8)]
 pub(crate) enum Code {
     #[num_enum(default)]
@@ -70,8 +69,7 @@ pub(crate) enum Code {
     DiscardReq = 11,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd, defmt::Format)]
 enum Phase {
     Dead,
     Establish,
@@ -101,8 +99,7 @@ pub struct PPP<'a, B: AsMutSlice<Element = u8>> {
     ipv4cp: StateMachine<IPv4CP>,
 }
 
-#[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, defmt::Format)]
 pub struct Status {
     /// IPv4 configuration obtained from IPv4CP. None if IPv4CP is not up.
     pub ipv4: Option<Ipv4Status>,
@@ -164,7 +161,7 @@ impl<'a, B: AsMutSlice<Element = u8>> PPP<'a, B> {
         let mut ww = FrameWriter::new(tx_buf);
         let w = &mut ww;
 
-        let buf = expect!(self.rx_buf.as_mut(), "called poll() without an rx_buf").as_mut_slice();
+        let buf = unwrap!(self.rx_buf.as_mut(), "called poll() without an rx_buf").as_mut_slice();
 
         // Handle input
         if let Some(range) = self.frame_reader.receive() {
@@ -268,7 +265,7 @@ impl<'a, B: AsMutSlice<Element = u8>> PPP<'a, B> {
     /// Returns how many bytes were actually consumed. If less than `data.len()`, `consume`
     /// must be called again with the remaining data.
     pub fn consume(&mut self, data: &[u8]) -> usize {
-        let buf = expect!(self.rx_buf.as_mut(), "called consume() without an rx_buf");
+        let buf = unwrap!(self.rx_buf.as_mut(), "called consume() without an rx_buf");
         self.frame_reader.consume(buf.as_mut_slice(), data)
     }
 }
