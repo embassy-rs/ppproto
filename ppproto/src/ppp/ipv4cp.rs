@@ -1,9 +1,8 @@
 use defmt::*;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
-use super::options::{Protocol, Verdict};
-use super::packet_writer::PacketWriter;
-use super::{Error, ProtocolType};
+use super::option_fsm::{Protocol, Verdict};
+use crate::wire::ProtocolType;
 
 use smoltcp::wire::Ipv4Address;
 
@@ -36,13 +35,6 @@ impl IpOption {
         } else {
             Some(self.address)
         }
-    }
-
-    fn emit(&mut self, code: OptionCode, p: &mut PacketWriter) -> Result<(), Error> {
-        if !self.is_rejected {
-            p.append_option(code.into(), self.address.as_bytes())?;
-        }
-        Ok(())
     }
 
     fn nacked(&mut self, data: &[u8], is_rej: bool) {
@@ -125,11 +117,25 @@ impl Protocol for IPv4CP {
         }
     }
 
-    fn own_options(&mut self, p: &mut PacketWriter) -> Result<(), Error> {
-        self.address.emit(OptionCode::IpAddress, p)?;
-        self.dns_server_1.emit(OptionCode::Dns1, p)?;
-        self.dns_server_2.emit(OptionCode::Dns2, p)?;
-        Ok(())
+    fn own_options(&mut self, mut f: impl FnMut(u8, &[u8])) {
+        if !self.address.is_rejected {
+            f(
+                OptionCode::IpAddress.into(),
+                self.address.address.as_bytes(),
+            );
+        }
+        if !self.dns_server_1.is_rejected {
+            f(
+                OptionCode::Dns1.into(),
+                self.dns_server_1.address.as_bytes(),
+            );
+        }
+        if !self.dns_server_2.is_rejected {
+            f(
+                OptionCode::Dns2.into(),
+                self.dns_server_2.address.as_bytes(),
+            );
+        }
     }
 
     fn own_option_nacked(&mut self, code: u8, data: &[u8], is_rej: bool) {

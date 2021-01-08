@@ -2,10 +2,8 @@ use core::convert::TryInto;
 use defmt::*;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
-use super::options::{Protocol, Verdict};
-use super::packet_writer::PacketWriter;
-use super::Error;
-use super::ProtocolType;
+use super::option_fsm::{Protocol, Verdict};
+use crate::wire::ProtocolType;
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, defmt::Format)]
 #[repr(u8)]
@@ -74,11 +72,10 @@ impl Protocol for LCP {
         }
     }
 
-    fn own_options(&mut self, p: &mut PacketWriter) -> Result<(), Error> {
+    fn own_options(&mut self, mut f: impl FnMut(u8, &[u8])) {
         if !self.asyncmap_rej {
-            p.append_option(Option::Asyncmap.into(), &self.asyncmap.to_be_bytes())?;
+            f(Option::Asyncmap.into(), &self.asyncmap.to_be_bytes());
         }
-        Ok(())
     }
 
     fn own_option_nacked(&mut self, code: u8, data: &[u8], is_rej: bool) {

@@ -5,7 +5,7 @@ use clap::Clap;
 use std::io::{Read, Write};
 use std::path::Path;
 
-use ppproto::{Action, Config, Error, PPP};
+use ppproto::{Config, PPPoS, PPPoSAction};
 use serial_port::SerialPort;
 
 #[derive(Clap)]
@@ -24,7 +24,7 @@ fn main() {
         username: b"myuser",
         password: b"mypass",
     };
-    let mut ppp = PPP::new(config);
+    let mut ppp = PPPoS::new(config);
 
     let mut rx_buf = [0; 2048];
     ppp.put_rx_buf(&mut rx_buf);
@@ -37,10 +37,10 @@ fn main() {
     let mut data: &[u8] = &[];
     loop {
         // Poll the ppp
-        match ppp.poll(&mut tx_buf).unwrap() {
-            Action::None => {}
-            Action::Transmit(x) => port.write_all(x).unwrap(),
-            Action::Received(rx_buf, range) => {
+        match ppp.poll(&mut tx_buf) {
+            PPPoSAction::None => {}
+            PPPoSAction::Transmit(x) => port.write_all(x).unwrap(),
+            PPPoSAction::Received(rx_buf, range) => {
                 let pkt = &mut rx_buf[range];
                 log::info!("received packet: {:x?}", pkt);
 

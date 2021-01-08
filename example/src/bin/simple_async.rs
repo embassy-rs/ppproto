@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::pin::Pin;
 
-use ppproto::{Action, Config, Error, PPP};
+use ppproto::{Config, PPPoS, PPPoSAction};
 use serial_port::SerialPort;
 
 #[derive(Clap)]
@@ -31,17 +31,17 @@ async fn run_main() {
     };
 
     let mut rx_buf = [0; 2048];
-    let mut ppp = PPP::new(config);
+    let mut ppp = PPPoS::new(config);
     ppp.open().unwrap();
 
     let mut tx_buf = [0; 2048];
 
     loop {
         // Poll the ppp
-        match ppp.poll(&mut tx_buf).unwrap() {
-            Action::None => {}
-            Action::Transmit(x) => s.write_all(x).await.unwrap(),
-            Action::Received(pkt, _sender) => log::info!("received packet: {:x?}", pkt),
+        match ppp.poll(&mut tx_buf) {
+            PPPoSAction::None => {}
+            PPPoSAction::Transmit(x) => s.write_all(&tx_buf[..x]).await.unwrap(),
+            PPPoSAction::Received(pkt, _sender) => log::info!("received packet: {:x?}", pkt),
         }
 
         // Consume some data

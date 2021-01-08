@@ -1,5 +1,7 @@
 use super::crc::crc16;
-use super::Error;
+
+#[derive(Debug, defmt::Format, PartialEq, Eq, Clone, Copy)]
+pub struct BufferFullError;
 
 pub struct FrameWriter<'a> {
     buf: &'a mut [u8],
@@ -31,7 +33,7 @@ impl<'a> FrameWriter<'a> {
         self.len
     }
 
-    pub fn start(&mut self) -> Result<(), Error> {
+    pub fn start(&mut self) -> Result<(), BufferFullError> {
         self.crc = crc16(0xFFFF, &[0xFF, 0x03]);
         self.append_raw(&[0x7e, 0xff])?;
         self.append_escaped(&[0x03])?;
@@ -39,7 +41,7 @@ impl<'a> FrameWriter<'a> {
         Ok(())
     }
 
-    pub fn finish(&mut self) -> Result<(), Error> {
+    pub fn finish(&mut self) -> Result<(), BufferFullError> {
         let crc = self.crc ^ 0xFFFF;
         self.append_escaped(&crc.to_le_bytes())?;
         self.append_raw(&[0x7e])?;
@@ -47,9 +49,9 @@ impl<'a> FrameWriter<'a> {
         Ok(())
     }
 
-    fn append_raw(&mut self, data: &[u8]) -> Result<(), Error> {
+    fn append_raw(&mut self, data: &[u8]) -> Result<(), BufferFullError> {
         if self.len + data.len() > self.buf.len() {
-            Err(Error::NoMem)
+            Err(BufferFullError)
         } else {
             self.buf[self.len..][..data.len()].copy_from_slice(data);
             self.len += data.len();
@@ -57,7 +59,7 @@ impl<'a> FrameWriter<'a> {
         }
     }
 
-    fn append_escaped(&mut self, data: &[u8]) -> Result<(), Error> {
+    fn append_escaped(&mut self, data: &[u8]) -> Result<(), BufferFullError> {
         for &b in data {
             let escape = match b {
                 0..=0x1f => self.asyncmap & (1 << (b as u32)) != 0,
@@ -75,7 +77,7 @@ impl<'a> FrameWriter<'a> {
         Ok(())
     }
 
-    pub fn append(&mut self, data: &[u8]) -> Result<(), Error> {
+    pub fn append(&mut self, data: &[u8]) -> Result<(), BufferFullError> {
         self.append_escaped(data)?;
         self.crc = crc16(self.crc, data);
         Ok(())
