@@ -23,9 +23,7 @@ pub enum ProtocolType {
     IPv4CP = 0x8021,
 }
 
-#[derive(
-    FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd,
-)]
+#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
 #[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum Code {
@@ -138,8 +136,8 @@ impl Options {
 
 #[cfg(feature = "derive-defmt")]
 impl defmt::Format for Options {
-    fn format(&self, fmt: &mut Formatter) {
-        defmt::write!(fmt, "{:[?]}", &self.0[..])
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "{=[?]}", &self.0[..])
     }
 }
 
@@ -172,7 +170,7 @@ struct OptionData(Vec<u8, MaxOptionLen>);
 
 #[cfg(feature = "derive-defmt")]
 impl defmt::Format for OptionData {
-    fn format(&self, fmt: &mut Formatter) {
-        defmt::write!(fmt, "{:[?]}", &self.0[..])
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "{=[?]}", &self.0[..])
     }
 }

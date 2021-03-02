@@ -9,5 +9,5 @@ set -euxo pipefail
 
 # embedded
 (cd ppproto; cargo build --target thumbv7em-none-eabi --no-default-features)
-(cd ppproto; cargo build --target thumbv7em-none-eabi --no-default-features --features log)
-(cd ppproto; cargo build --target thumbv7em-none-eabi --no-default-features --features defmt)
+(cd ppproto; cargo build --target thumbv7em-none-eabi --no-default-features --features logging-log)
+(cd ppproto; cargo build --target thumbv7em-none-eabi --no-default-features --features logging-defmt)
