@@ -1,11 +1,11 @@
-use core::convert::TryInto;
 use crate::fmt::{assert, panic, unreachable, *};
+use core::convert::TryInto;
 use heapless::Vec;
 
 use crate::wire::{Code, OptionVal, Options, PPPPayload, Packet, Payload, ProtocolType};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub(crate) enum Verdict<'a> {
     Ack,
     Nack(&'a [u8]),
@@ -23,7 +23,7 @@ pub(crate) trait Protocol {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub(crate) enum State {
     Closed,
     ReqSent,
@@ -303,5 +303,5 @@ fn parse_options(mut pkt: &[u8], mut f: impl FnMut(u8, &[u8])) -> Result<(), Mal
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct MalformedError;

@@ -668,7 +668,6 @@ source = "git+https://github.com/akiles/smoltcp#9bdf72b6b205360062a24ef7ebc3e04b
 dependencies = [
  "bitflags",
  "byteorder",
- "defmt",
  "libc",
  "log",
  "managed 0.7.2",

@@ -1,12 +1,12 @@
 #![macro_use]
 #![allow(clippy::module_inception)]
 
-#[cfg(all(feature = "logging-defmt", feature = "logging-log"))]
-compile_error!("You may not enable both `logging-defmt` and `logging-log` features.");
+#[cfg(all(feature = "defmt", feature = "log"))]
+compile_error!("You may not enable both `defmt` and `log` features.");
 
 pub use fmt::*;
 
-#[cfg(feature = "logging-defmt")]
+#[cfg(feature = "defmt")]
 mod fmt {
     pub use defmt::{
         assert, assert_eq, assert_ne, debug, debug_assert, debug_assert_eq, debug_assert_ne, error,
@@ -14,7 +14,7 @@ mod fmt {
     };
 }
 
-#[cfg(feature = "logging-log")]
+#[cfg(feature = "log")]
 mod fmt {
     pub use core::{
         assert, assert_eq, assert_ne, debug_assert, debug_assert_eq, debug_assert_ne, panic, todo,
@@ -23,7 +23,7 @@ mod fmt {
     pub use log::{debug, error, info, trace, warn};
 }
 
-#[cfg(not(any(feature = "logging-defmt", feature = "logging-log")))]
+#[cfg(not(any(feature = "defmt", feature = "log")))]
 mod fmt {
     #![macro_use]
 
@@ -68,7 +68,7 @@ mod fmt {
     }
 }
 
-#[cfg(not(feature = "logging-defmt"))]
+#[cfg(not(feature = "defmt"))]
 #[macro_export]
 macro_rules! unwrap {
     ($arg:expr) => {

@@ -7,10 +7,6 @@ edition = "2018"
 [features]
 std = []
 
-derive-defmt = ["defmt", "smoltcp/defmt"]
-logging-defmt = ["defmt", "derive-defmt"]
-logging-log = ["log"]
-
 defmt-trace = []
 defmt-debug = []
 defmt-info = []

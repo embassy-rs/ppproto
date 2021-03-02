@@ -7,7 +7,7 @@ use crate::wire::ProtocolType;
 use smoltcp::wire::Ipv4Address;
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 enum OptionCode {
     #[num_enum(default)]
@@ -55,7 +55,7 @@ impl IpOption {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Ipv4Status {
     pub address: Option<Ipv4Address>,
     pub peer_address: Option<Ipv4Address>,

@@ -11,5 +11,5 @@ pub use ppp::{Config, Phase, Status};
 pub use pppos::{BufferFullError, PPPoS, PPPoSAction};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InvalidStateError;

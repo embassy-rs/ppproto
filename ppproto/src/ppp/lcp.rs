@@ -1,12 +1,12 @@
-use core::convert::TryInto;
 use crate::fmt::*;
+use core::convert::TryInto;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use super::option_fsm::{Protocol, Verdict};
 use crate::wire::ProtocolType;
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 enum Option {
     #[num_enum(default)]
@@ -16,7 +16,7 @@ enum Option {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum AuthType {
     None = 0,
     PAP = 0xc023,

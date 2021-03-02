@@ -1,10 +1,10 @@
-use core::convert::TryInto;
 use crate::fmt::{assert, *};
+use core::convert::TryInto;
 
 use crate::wire::{Code, PPPPayload, Packet, Payload, ProtocolType};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum State {
     Closed,
     ReqSent,
