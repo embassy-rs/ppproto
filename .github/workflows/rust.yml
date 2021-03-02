@@ -17,6 +17,8 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          target: thumbv7em-none-eabi
+          components: rust-src
           override: true
       - name: Build
         run: ./ci.sh
