@@ -14,3 +14,4 @@ smoltcp = "0.6.0"
 log = "0.4.11"
 futures            = { version = "0.3.8" }
 async-io = "1.1.10"
+as-slice = "0.1.4"

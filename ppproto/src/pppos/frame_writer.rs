@@ -1,6 +1,7 @@
 use super::crc::crc16;
 
-#[derive(Debug, defmt::Format, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub struct BufferFullError;
 
 pub struct FrameWriter<'a> {

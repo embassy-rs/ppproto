@@ -1,10 +1,11 @@
 use core::convert::TryInto;
-use defmt::{assert, panic, unreachable, *};
+use crate::fmt::{assert, panic, unreachable, *};
 use heapless::Vec;
 
 use crate::wire::{Code, OptionVal, Options, PPPPayload, Packet, Payload, ProtocolType};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, defmt::Format)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub(crate) enum Verdict<'a> {
     Ack,
     Nack(&'a [u8]),
@@ -21,7 +22,8 @@ pub(crate) trait Protocol {
     fn peer_option_received(&mut self, code: u8, data: &[u8]) -> Verdict;
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, defmt::Format)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub(crate) enum State {
     Closed,
     ReqSent,
@@ -300,5 +302,6 @@ fn parse_options(mut pkt: &[u8], mut f: impl FnMut(u8, &[u8])) -> Result<(), Mal
     Ok(())
 }
 
-#[derive(Debug, defmt::Format, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub struct MalformedError;

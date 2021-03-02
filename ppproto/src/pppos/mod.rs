@@ -5,7 +5,7 @@ mod frame_writer;
 use as_slice::AsMutSlice;
 use core::convert::TryInto;
 use core::ops::Range;
-use defmt::{assert, panic, *};
+use crate::fmt::{assert, panic, *};
 
 use self::frame_reader::FrameReader;
 use self::frame_writer::FrameWriter;

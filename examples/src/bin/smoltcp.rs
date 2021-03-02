@@ -1,28 +1,28 @@
 #[path = "../serial_port.rs"]
 mod serial_port;
 
+use as_slice::{AsMutSlice, AsSlice};
 use clap::Clap;
-use managed::ManagedSlice;
-use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::io::{Read, Write};
-use std::mem;
+use std::marker::PhantomData;
+use std::ops::Range;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::str;
 
 use log::*;
-use smoltcp::iface::{InterfaceBuilder, NeighborCache};
+use smoltcp::iface::InterfaceBuilder;
 use smoltcp::phy::wait as phy_wait;
-use smoltcp::phy::{ChecksumCapabilities, Device, DeviceCapabilities, Medium, RxToken, TxToken};
+use smoltcp::phy::{Device, DeviceCapabilities, Medium, RxToken, TxToken};
 use smoltcp::socket::SocketSet;
 use smoltcp::socket::{TcpSocket, TcpSocketBuffer};
 use smoltcp::socket::{UdpPacketMetadata, UdpSocket, UdpSocketBuffer};
 use smoltcp::time::{Duration, Instant};
-use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr, Ipv4Address};
+use smoltcp::wire::{IpCidr, Ipv4Address};
 use smoltcp::Result;
 
-use ppproto::{Action, Config, Error, Sender, PPP};
+use ppproto::{Config, PPPoS, PPPoSAction};
 use serial_port::SerialPort;
 
 #[derive(Clap)]
@@ -31,13 +31,34 @@ struct Opts {
     device: String,
 }
 
+const MTU: usize = 1520; // IP mtu of 1500 + some margin for PPP headers.
+struct Buf(Box<[u8; MTU]>);
+impl Buf {
+    pub fn new() -> Self {
+        Self(Box::new([0; MTU]))
+    }
+}
+impl AsSlice for Buf {
+    type Element = u8;
+    fn as_slice(&self) -> &[Self::Element] {
+        &*self.0
+    }
+}
+impl AsMutSlice for Buf {
+    fn as_mut_slice(&mut self) -> &mut [Self::Element] {
+        &mut *self.0
+    }
+}
+
+type PPP = PPPoS<'static, Buf>;
+
 struct PPPDevice {
-    ppp: PPP<'static>,
+    ppp: PPP,
     port: SerialPort,
 }
 
 impl PPPDevice {
-    fn new(ppp: PPP<'static>, port: SerialPort) -> Self {
+    fn new(ppp: PPP, port: SerialPort) -> Self {
         Self { ppp, port }
     }
 }
@@ -55,17 +76,20 @@ impl<'a> Device<'a> for PPPDevice {
         let mut data: &[u8] = &[];
         loop {
             // Poll the ppp
-            match self.ppp.poll(&mut tx_buf).unwrap() {
-                Action::None => {}
-                Action::Transmit(x) => self.port.write_all(x).unwrap(),
-                Action::Received(pkt, sender) => {
-                    let pkt = unsafe { mem::transmute(pkt) };
-                    let sender = unsafe { mem::transmute(sender) };
+            match self.ppp.poll(&mut tx_buf) {
+                PPPoSAction::None => {}
+                PPPoSAction::Transmit(n) => self.port.write_all(&tx_buf[..n]).unwrap(),
+                PPPoSAction::Received(buf, range) => {
+                    self.ppp.put_rx_buf(Buf::new());
                     return Some((
-                        PPPRxToken { pkt },
+                        PPPRxToken {
+                            buf,
+                            range,
+                            _phantom: PhantomData,
+                        },
                         PPPTxToken {
                             port: &mut self.port,
-                            sender,
+                            ppp: &mut self.ppp,
                         },
                     ));
                 }
@@ -91,7 +115,7 @@ impl<'a> Device<'a> for PPPDevice {
     fn transmit(&'a mut self) -> Option<Self::TxToken> {
         Some(PPPTxToken {
             port: &mut self.port,
-            sender: self.ppp.sender(),
+            ppp: &mut self.ppp,
         })
     }
 
@@ -105,25 +129,27 @@ impl<'a> Device<'a> for PPPDevice {
 }
 
 struct PPPRxToken<'a> {
-    pkt: &'a mut [u8],
+    buf: Buf,
+    range: Range<usize>,
+    _phantom: PhantomData<&'a mut PPP>,
 }
 
 impl<'a> RxToken for PPPRxToken<'a> {
-    fn consume<R, F>(self, timestamp: Instant, f: F) -> Result<R>
+    fn consume<R, F>(mut self, _timestamp: Instant, f: F) -> Result<R>
     where
         F: FnOnce(&mut [u8]) -> Result<R>,
     {
-        f(self.pkt)
+        f(&mut self.buf.0[self.range])
     }
 }
 
 struct PPPTxToken<'a> {
     port: &'a mut SerialPort,
-    sender: Sender<'a>,
+    ppp: &'a mut PPP,
 }
 
 impl<'a> TxToken for PPPTxToken<'a> {
-    fn consume<R, F>(mut self, timestamp: Instant, len: usize, f: F) -> Result<R>
+    fn consume<R, F>(self, _timestamp: Instant, len: usize, f: F) -> Result<R>
     where
         F: FnOnce(&mut [u8]) -> Result<R>,
     {
@@ -132,12 +158,12 @@ impl<'a> TxToken for PPPTxToken<'a> {
         let r = f(pkt)?;
 
         let mut tx_buf = [0; 2048];
-        let tx = self.sender.send(pkt, &mut tx_buf).unwrap();
+        let n = self.ppp.send(pkt, &mut tx_buf).unwrap();
 
         // not sure if this is necessary
         self.port.set_nonblocking(false).unwrap();
 
-        self.port.write_all(tx).unwrap();
+        self.port.write_all(&tx_buf[..n]).unwrap();
 
         Ok(r)
     }
@@ -148,21 +174,20 @@ fn main() {
 
     let opts: Opts = Opts::parse();
 
-    let mut port = SerialPort::new(Path::new(&opts.device)).unwrap();
+    let port = SerialPort::new(Path::new(&opts.device)).unwrap();
     let fd = port.as_raw_fd();
 
     let config = Config {
         username: b"myuser",
         password: b"mypass",
     };
-    let mut ppp = PPP::new(config);
+    let mut ppp = PPPoS::new(config);
 
-    let mut rx_buf = [0; 2048];
-    ppp.put_rx_buf(&mut rx_buf);
+    ppp.put_rx_buf(Buf::new());
 
     ppp.open().unwrap();
 
-    let mut device = PPPDevice::new(ppp, port);
+    let device = PPPDevice::new(ppp, port);
 
     let udp_rx_buffer = UdpSocketBuffer::new(vec![UdpPacketMetadata::EMPTY], vec![0; 64]);
     let udp_tx_buffer = UdpSocketBuffer::new(vec![UdpPacketMetadata::EMPTY], vec![0; 128]);

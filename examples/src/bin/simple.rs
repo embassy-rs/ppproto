@@ -39,7 +39,7 @@ fn main() {
         // Poll the ppp
         match ppp.poll(&mut tx_buf) {
             PPPoSAction::None => {}
-            PPPoSAction::Transmit(x) => port.write_all(x).unwrap(),
+            PPPoSAction::Transmit(n) => port.write_all(&tx_buf[..n]).unwrap(),
             PPPoSAction::Received(rx_buf, range) => {
                 let pkt = &mut rx_buf[range];
                 log::info!("received packet: {:x?}", pkt);
@@ -73,8 +73,8 @@ fn main() {
                         pkt[16..20].copy_from_slice(&src_addr);
 
                         // Send it!
-                        let x = ppp.send(&pkt, &mut tx_buf).unwrap();
-                        port.write_all(x).unwrap();
+                        let n = ppp.send(&pkt, &mut tx_buf).unwrap();
+                        port.write_all(&tx_buf[..n]).unwrap();
 
                         log::info!("replied to ping!");
                     }

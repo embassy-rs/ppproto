@@ -1,8 +1,8 @@
 [workspace]
 members = [
     "ppproto",
-    "example",
+    "examples",
 ]
 
 [patch.crates-io]
-smoltcp = { git = "https://github.com/akiles/smoltcp", rev="d190cc1d801606c3834f4134e227e0b183028bc2"}
+smoltcp = { git = "https://github.com/akiles/smoltcp"}

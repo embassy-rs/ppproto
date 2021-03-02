@@ -4,7 +4,7 @@ mod option_fsm;
 mod pap;
 
 use core::convert::TryInto;
-use defmt::{panic, todo, *};
+use crate::fmt::{panic, todo, *};
 
 use self::ipv4cp::IPv4CP;
 use self::lcp::{AuthType, LCP};
@@ -19,7 +19,8 @@ pub struct Config<'a> {
     pub password: &'a [u8],
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd, defmt::Format)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub enum Phase {
     Dead,
     Establish,
@@ -28,7 +29,8 @@ pub enum Phase {
     Open,
 }
 
-#[derive(Debug, defmt::Format)]
+#[derive(Debug)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub struct Status {
     /// IPv4 configuration obtained from IPv4CP. None if IPv4CP is not up.
     pub ipv4: Option<Ipv4Status>,

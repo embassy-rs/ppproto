@@ -1,5 +1,5 @@
-use defmt::*;
-use defmt::{panic, *};
+use crate::fmt::*;
+use crate::fmt::{panic, *};
 use heapless::consts::*;
 use heapless::Vec;
 use num_enum::{FromPrimitive, IntoPrimitive};
@@ -7,7 +7,8 @@ use num_enum::{FromPrimitive, IntoPrimitive};
 pub type MaxOptions = U6;
 pub type MaxOptionLen = U4;
 
-#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, defmt::Format)]
+#[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 #[repr(u16)]
 pub enum ProtocolType {
     #[num_enum(default)]
@@ -23,8 +24,9 @@ pub enum ProtocolType {
 }
 
 #[derive(
-    FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd, defmt::Format,
+    FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd,
 )]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum Code {
     #[num_enum(default)]
@@ -42,7 +44,7 @@ pub enum Code {
     DiscardReq = 11,
 }
 
-#[derive(defmt::Format)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub struct Packet<'a> {
     pub proto: ProtocolType,
     pub payload: Payload<'a>,
@@ -60,7 +62,7 @@ impl<'a> Packet<'a> {
     }
 }
 
-#[derive(defmt::Format)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub enum Payload<'a> {
     Raw(&'a mut [u8]),
     PPP(Code, u8, PPPPayload<'a>),
@@ -88,7 +90,7 @@ impl<'a> Payload<'a> {
     }
 }
 
-#[derive(defmt::Format)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub enum PPPPayload<'a> {
     Raw(&'a mut [u8]),
     PAP(&'a [u8], &'a [u8]),
@@ -134,13 +136,14 @@ impl Options {
     }
 }
 
+#[cfg(feature = "derive-defmt")]
 impl defmt::Format for Options {
     fn format(&self, fmt: &mut Formatter) {
         defmt::write!(fmt, "{:[?]}", &self.0[..])
     }
 }
 
-#[derive(defmt::Format)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub struct OptionVal {
     code: u8,
     data: OptionData,
@@ -167,6 +170,7 @@ impl OptionVal {
 
 struct OptionData(Vec<u8, MaxOptionLen>);
 
+#[cfg(feature = "derive-defmt")]
 impl defmt::Format for OptionData {
     fn format(&self, fmt: &mut Formatter) {
         defmt::write!(fmt, "{:[?]}", &self.0[..])

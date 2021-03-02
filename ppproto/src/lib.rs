@@ -1,5 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// This mod MUST go first, so that the others see its macros.
+pub(crate) mod fmt;
+
 mod ppp;
 pub mod pppos;
 mod wire;
@@ -7,5 +10,6 @@ mod wire;
 pub use ppp::{Config, Phase, Status};
 pub use pppos::{BufferFullError, PPPoS, PPPoSAction};
 
-#[derive(Debug, defmt::Format, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "derive-defmt", derive(defmt::Format))]
 pub struct InvalidStateError;
