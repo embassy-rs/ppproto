@@ -10,7 +10,7 @@ nix = "0.19.1"
 ppproto = {path = "../ppproto", features=["std"]}
 managed = { version = "0.8.0", default-features = false }
 env_logger = "0.8.2"
-smoltcp = "=0.7.0"
+smoltcp = "=0.8.0"
 log = "0.4.11"
 futures            = { version = "0.3.8" }
 async-io = "1.1.10"
