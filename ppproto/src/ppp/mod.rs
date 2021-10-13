@@ -3,7 +3,6 @@ mod lcp;
 mod option_fsm;
 mod pap;
 
-use crate::fmt::{panic, todo, *};
 use core::convert::TryInto;
 
 use self::ipv4cp::IPv4CP;

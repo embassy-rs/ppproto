@@ -1,4 +1,3 @@
-use crate::fmt::*;
 use core::convert::TryInto;
 use num_enum::{FromPrimitive, IntoPrimitive};
 

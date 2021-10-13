@@ -1,4 +1,3 @@
-use crate::fmt::*;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use super::option_fsm::{Protocol, Verdict};

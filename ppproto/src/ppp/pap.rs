@@ -1,4 +1,3 @@
-use crate::fmt::{assert, *};
 use core::convert::TryInto;
 
 use crate::wire::{Code, PPPPayload, Packet, Payload, ProtocolType};

@@ -1,11 +1,8 @@
-use crate::fmt::*;
-use crate::fmt::{panic, *};
-use heapless::consts::*;
 use heapless::Vec;
 use num_enum::{FromPrimitive, IntoPrimitive};
 
-pub type MaxOptions = U6;
-pub type MaxOptionLen = U4;
+pub const MAX_OPTIONS: usize = 6;
+pub const MAX_OPTION_LEN: usize = 4;
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -118,7 +115,7 @@ impl<'a> PPPPayload<'a> {
     }
 }
 
-pub struct Options(pub Vec<OptionVal, MaxOptions>);
+pub struct Options(pub Vec<OptionVal, MAX_OPTIONS>);
 
 impl Options {
     pub fn buffer_len(&self) -> usize {
@@ -166,7 +163,7 @@ impl OptionVal {
     }
 }
 
-struct OptionData(Vec<u8, MaxOptionLen>);
+struct OptionData(Vec<u8, MAX_OPTION_LEN>);
 
 #[cfg(feature = "defmt")]
 impl defmt::Format for OptionData {

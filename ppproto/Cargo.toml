@@ -19,5 +19,5 @@ log = { version = "0.4.11", default-features = false, optional = true }
 
 num_enum = { version = "0.5.1", default-features = false }
 smoltcp = { version = "=0.8.0", default-features = false, features = [ "proto-ipv4" ] }
-as-slice = "0.1.4"
-heapless = "0.5.6"
+as-slice = "0.2.1"
+heapless = "0.7.7"
