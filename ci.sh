@@ -2,6 +2,8 @@
 
 set -euxo pipefail
 
+export RUSTFLAGS=-Dwarnings
+
 (cd examples; cargo build --bins)
 
 (cd ppproto; cargo build --no-default-features)
