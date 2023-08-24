@@ -17,7 +17,6 @@ categories = [
     "network-programming",
 ]
 
-
 [dependencies]
 defmt = { version = "0.3", optional = true }
 log = { version = "0.4.20", default-features = false, optional = true }

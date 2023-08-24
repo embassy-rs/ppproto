@@ -43,19 +43,19 @@ impl<'a> PAP<'a> {
 
     pub fn handle(&mut self, pkt: &mut [u8], mut tx: impl FnMut(Packet<'_>)) {
         if pkt.len() < 6 {
-            info!("warn: too short");
+            warn!("PAP packet too short");
             return;
         }
         let code = Code::from(pkt[2]);
         let _id = pkt[3];
         let len = u16::from_be_bytes(pkt[4..6].try_into().unwrap()) as usize;
         if len > pkt.len() {
-            info!("warn: len too short");
+            warn!("PAP packet len too short");
             return;
         }
         let _pkt = &mut pkt[..len + 2];
 
-        info!("PAP: rx {:?}", code);
+        debug!("PAP: rx {:?}", code);
         let old_state = self.state;
         match (code, self.state) {
             (Code::ConfigureAck, State::ReqSent) => self.state = State::Opened,
@@ -64,7 +64,7 @@ impl<'a> PAP<'a> {
         }
 
         if old_state != self.state {
-            info!("PAP: state {:?} -> {:?}", old_state, self.state);
+            debug!("PAP: state {:?} -> {:?}", old_state, self.state);
         }
     }
 
@@ -74,7 +74,7 @@ impl<'a> PAP<'a> {
     }
 
     fn send_configure_request(&mut self) -> Packet<'a> {
-        info!("PAP: tx {:?}", Code::ConfigureReq);
+        debug!("PAP: tx {:?}", Code::ConfigureReq);
         Packet {
             proto: ProtocolType::PAP,
             payload: Payload::PPP(

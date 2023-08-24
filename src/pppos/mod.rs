@@ -68,7 +68,7 @@ impl<'a> PPPoS<'a> {
         let mut w = FrameWriter::new(tx_buf);
 
         let mut tx = |pkt: Packet<'_>| {
-            //info!("tx: {:?}", pkt);
+            //debug!("tx: {:?}", pkt);
 
             let mut buf = [0; 128];
             let len = pkt.buffer_len();

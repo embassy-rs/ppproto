@@ -69,25 +69,25 @@ impl<P: Protocol> OptionFsm<P> {
 
     pub fn handle(&mut self, pkt: &mut [u8], mut tx: impl FnMut(Packet<'_>)) {
         if pkt.len() < 6 {
-            info!("warn: too short");
+            warn!("PPP packet too short");
             return;
         }
         let code = Code::from(pkt[2]);
         let id = pkt[3];
         let len = u16::from_be_bytes(pkt[4..6].try_into().unwrap()) as usize;
         if len + 2 > pkt.len() {
-            info!("warn: len too short");
+            warn!("PPP packet len too short");
             return;
         }
         let pkt = &mut pkt[..len + 2];
 
-        info!("{:?}: rx {:?}", self.proto.protocol(), code);
+        debug!("{:?}: rx {:?}", self.proto.protocol(), code);
         let old_state = self.state;
         match (code, self.state) {
             // reply EchoReq on state Opened, ignore in all other states (including Closed!)
             (Code::EchoReq, State::Opened) => tx(self.send_echo_response(pkt)),
             (Code::EchoReq, x) => {
-                info!("ignoring unexpected EchoReq in state {:?}", x)
+                debug!("ignoring unexpected EchoReq in state {:?}", x)
             }
 
             // DiscardReqs are, well, discarded.
@@ -157,14 +157,14 @@ impl<P: Protocol> OptionFsm<P> {
                 tx(self.send_terminate_ack(id))
             }
 
-            x => info!(
+            x => debug!(
                 "ignoring unexpected packet {:?} in state {:?}",
                 x, self.state
             ),
         };
 
         if old_state != self.state {
-            info!(
+            debug!(
                 "{:?}: state {:?} -> {:?}",
                 self.proto.protocol(),
                 old_state,
