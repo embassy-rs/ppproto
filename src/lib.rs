@@ -1,4 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![warn(missing_docs)]
+#![allow(non_upper_case_globals)]
+#![doc = include_str!("../README.md")]
 
 // This mod MUST go first, so that the others see its macros.
 pub(crate) mod fmt;
@@ -8,8 +11,8 @@ pub mod pppos;
 mod wire;
 
 pub use ppp::{Config, Ipv4Address, Ipv4Status, Phase, Status};
-pub use pppos::{BufferFullError, PPPoS, PPPoSAction};
 
+/// Invalid state error.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InvalidStateError;

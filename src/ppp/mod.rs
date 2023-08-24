@@ -13,29 +13,41 @@ use crate::wire::{Packet, ProtocolType};
 
 pub use self::ipv4cp::{Ipv4Address, Ipv4Status};
 
+/// PPP configuration.
 pub struct Config<'a> {
+    /// Username for PAP.
     pub username: &'a [u8],
+    /// Password for PAP.
     pub password: &'a [u8],
 }
 
+/// Phase of the PPP connection.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Ord, PartialOrd)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Phase {
+    /// Dead, not connected.
     Dead,
+    /// Establishing initial connection.
     Establish,
+    /// Authenticating with e.g. PAP.
     Auth,
+    /// Negotiating network parameters, with e.g. IPv4CP
     Network,
+    /// Connection is open, all layers are setup.
     Open,
 }
 
+/// Status of the PPP connection.
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Status {
+    /// Phase
+    pub phase: Phase,
     /// IPv4 configuration obtained from IPv4CP. None if IPv4CP is not up.
     pub ipv4: Option<Ipv4Status>,
 }
 
-pub struct PPP<'a> {
+pub(crate) struct PPP<'a> {
     phase: Phase,
     pub(crate) lcp: OptionFsm<LCP>,
     pub(crate) pap: PAP<'a>,
@@ -54,6 +66,7 @@ impl<'a> PPP<'a> {
 
     pub fn status(&self) -> Status {
         Status {
+            phase: self.phase,
             ipv4: if self.ipv4cp.state() == State::Opened {
                 Some(self.ipv4cp.proto().status())
             } else {

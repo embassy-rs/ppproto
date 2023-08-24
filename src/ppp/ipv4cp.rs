@@ -5,12 +5,16 @@ use num_enum::{FromPrimitive, IntoPrimitive};
 use super::option_fsm::{Protocol, Verdict};
 use crate::wire::ProtocolType;
 
+/// IPv4 address.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Ipv4Address(pub [u8; 4]);
+
 impl Ipv4Address {
+    /// The unspecified address `0.0.0.0`.
     pub const UNSPECIFIED: Self = Self([0; 4]);
 
+    /// Return whether this address is the unspecified address `0.0.0.0`.
     pub fn is_unspecified(&self) -> bool {
         *self == Self::UNSPECIFIED
     }
@@ -64,11 +68,15 @@ impl IpOption {
     }
 }
 
+/// Status of the IPv4 connection.
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Ipv4Status {
+    /// Our adress
     pub address: Option<Ipv4Address>,
+    /// The peer's address
     pub peer_address: Option<Ipv4Address>,
+    /// DNS servers provided by the peer.
     pub dns_servers: [Option<Ipv4Address>; 2],
 }
 

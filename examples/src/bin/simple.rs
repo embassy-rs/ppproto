@@ -5,7 +5,8 @@ use clap::Parser;
 use std::io::{Read, Write};
 use std::path::Path;
 
-use ppproto::{Config, PPPoS, PPPoSAction};
+use ppproto::pppos::{PPPoS, PPPoSAction};
+use ppproto::Config;
 use serial_port::SerialPort;
 
 #[derive(Parser)]

@@ -19,7 +19,8 @@ use smoltcp::socket::{tcp, udp};
 use smoltcp::time::{Duration, Instant};
 use smoltcp::wire::IpCidr;
 
-use ppproto::{Config, PPPoS, PPPoSAction};
+use ppproto::pppos::{PPPoS, PPPoSAction};
+use ppproto::Config;
 use serial_port::SerialPort;
 
 #[derive(clap::Parser)]

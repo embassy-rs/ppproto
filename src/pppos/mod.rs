@@ -1,3 +1,5 @@
+//! PPP over Serial
+
 mod crc;
 mod frame_reader;
 mod frame_writer;
@@ -14,12 +16,24 @@ use crate::{Config, Status};
 
 pub use self::frame_writer::BufferFullError;
 
+/// Return value from [`PPPoS::poll()`].
 pub enum PPPoSAction<B> {
+    /// No action needed to take.
     None,
+    /// An IP packet was received.
+    ///
+    /// The packet is located in `buffer[range]`, you must pass it to higher layers for processing.
+    ///
+    /// When this happens, the PPPoS gives you back ownership over the RX buffer. You must put a
+    /// buffer back with [`PPPoS::put_rx_buf`] before calling `poll()` or `consume()`.
     Received(B, Range<usize>),
+    /// PPP wants to transmit some data.
+    ///
+    /// You must transmit `tx_buf[..n]` over the serial connection.
     Transmit(usize),
 }
 
+/// Main PPPoS struct.
 pub struct PPPoS<'a, B: AsMutSlice<Element = u8>> {
     frame_reader: FrameReader,
     rx_buf: Option<B>,
@@ -27,6 +41,10 @@ pub struct PPPoS<'a, B: AsMutSlice<Element = u8>> {
 }
 
 impl<'a, B: AsMutSlice<Element = u8>> PPPoS<'a, B> {
+    /// Create a new PPPoS
+    ///
+    /// The PPPoS is created in phase [`Dead`](crate::Phase::Dead), i.e. not connected. You must
+    /// call [`open()`](Self::open) to get it to start connecting.
     pub fn new(config: Config<'a>) -> Self {
         Self {
             frame_reader: FrameReader::new(),
@@ -35,18 +53,30 @@ impl<'a, B: AsMutSlice<Element = u8>> PPPoS<'a, B> {
         }
     }
 
+    /// Get the status of the PPPoS connection.
     pub fn status(&self) -> Status {
         self.ppp.status()
     }
 
+    /// Start opening the PPPoS connection.
+    ///
+    /// This will kick off the PPP state machine.
+    ///
+    /// Returns an error if it's not in phase [`Dead`](crate::Phase::Dead).
     pub fn open(&mut self) -> Result<(), crate::InvalidStateError> {
         self.ppp.open()
     }
 
+    /// Get whether there's a buffer available for RXing.
     pub fn has_rx_buf(&self) -> bool {
         self.rx_buf.is_some()
     }
 
+    /// Make a buffer available for RXing.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there's already a buffer (i.e. if [`has_rx_buf()`](Self::has_rx_buf) returns `true`).
     pub fn put_rx_buf(&mut self, rx_buf: B) {
         if self.rx_buf.is_some() {
             panic!("called put_rx_buf when we already have a buffer.")
@@ -57,11 +87,8 @@ impl<'a, B: AsMutSlice<Element = u8>> PPPoS<'a, B> {
 
     /// Process received data and generate data to be send.
     ///
-    /// Action::Received is returned when an IP packet is received. You must then pass the packet
-    /// to higher layers for processing.
-    ///
-    /// You must provide buffer space for data to be transmitted, and transmit the returned slice
-    /// over the serial connection if Action::Transmit is returned.
+    /// The return value tells you what action to take. See [`PPPoSAction`] documentation
+    /// for details.
     pub fn poll(&mut self, tx_buf: &mut [u8]) -> PPPoSAction<B> {
         let mut w = FrameWriter::new(tx_buf);
 
@@ -107,8 +134,11 @@ impl<'a, B: AsMutSlice<Element = u8>> PPPoS<'a, B> {
 
     /// Send an IP packet.
     ///
-    /// You must provide buffer space for the data to be transmitted, and transmit the returned
-    /// slice over the serial connection.
+    /// You must provide enough buffer space for the data to be transmitted. This function
+    /// returns the size of the encoded packet `n`, you must transmit `tx_buf[..n]` over the
+    /// serial connection.
+    ///
+    /// Returns `BufferFullError` if `tx_buf` is too small.
     pub fn send(&mut self, pkt: &[u8], tx_buf: &mut [u8]) -> Result<usize, BufferFullError> {
         // TODO check IPv4CP is up
 
