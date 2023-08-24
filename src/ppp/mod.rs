@@ -3,8 +3,6 @@ mod lcp;
 mod option_fsm;
 mod pap;
 
-use core::convert::TryInto;
-
 use self::ipv4cp::IPv4CP;
 use self::lcp::{AuthType, LCP};
 use self::option_fsm::{OptionFsm, State};

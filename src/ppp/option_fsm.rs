@@ -1,4 +1,3 @@
-use core::convert::TryInto;
 use heapless::Vec;
 
 use crate::wire::{Code, OptionVal, Options, PPPPayload, Packet, Payload, ProtocolType};

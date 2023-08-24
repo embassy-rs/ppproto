@@ -28,7 +28,6 @@ fn main() {
     let mut ppp = PPPoS::new(config);
 
     let mut rx_buf = [0; 2048];
-    ppp.put_rx_buf(&mut rx_buf);
 
     ppp.open().unwrap();
 
@@ -38,10 +37,10 @@ fn main() {
     let mut data: &[u8] = &[];
     loop {
         // Poll the ppp
-        match ppp.poll(&mut tx_buf) {
+        match ppp.poll(&mut tx_buf, &mut rx_buf) {
             PPPoSAction::None => {}
             PPPoSAction::Transmit(n) => port.write_all(&tx_buf[..n]).unwrap(),
-            PPPoSAction::Received(rx_buf, range) => {
+            PPPoSAction::Received(range) => {
                 let pkt = &mut rx_buf[range];
                 log::info!("received packet: {:x?}", pkt);
 
@@ -80,8 +79,6 @@ fn main() {
                         log::info!("replied to ping!");
                     }
                 }
-
-                ppp.put_rx_buf(rx_buf);
             }
         }
 
@@ -92,7 +89,7 @@ fn main() {
         }
 
         // Consume some data, saving the rest for later
-        let n = ppp.consume(data);
+        let n = ppp.consume(data, &mut rx_buf);
         data = &data[n..];
     }
 }

@@ -2,7 +2,7 @@
 name = "example"
 version = "0.1.0"
 authors = ["Dario Nieuwenhuis <dirbaio@dirbaio.net>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 clap = { version = "4.3.24", features = ["derive"] }
@@ -14,5 +14,4 @@ smoltcp = { version = "0.10.0", features = ["log", "socket-tcp", "socket-udp", "
 log = "0.4.20"
 futures = "0.3.28"
 async-io = "1.13.0"
-as-slice = "0.2.1"
 rand = "0.8.5"

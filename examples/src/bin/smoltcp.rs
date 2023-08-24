@@ -1,12 +1,9 @@
 #[path = "../serial_port.rs"]
 mod serial_port;
 
-use as_slice::{AsMutSlice, AsSlice};
 use clap::Parser;
 use std::fmt::Write as _;
 use std::io::{Read, Write};
-use std::marker::PhantomData;
-use std::ops::Range;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::str;
@@ -30,34 +27,20 @@ struct Opts {
 }
 
 const MTU: usize = 1520; // IP mtu of 1500 + some margin for PPP headers.
-struct Buf(Box<[u8; MTU]>);
-impl Buf {
-    pub fn new() -> Self {
-        Self(Box::new([0; MTU]))
-    }
-}
-impl AsSlice for Buf {
-    type Element = u8;
-    fn as_slice(&self) -> &[Self::Element] {
-        &*self.0
-    }
-}
-impl AsMutSlice for Buf {
-    fn as_mut_slice(&mut self) -> &mut [Self::Element] {
-        &mut *self.0
-    }
-}
-
-type PPP = PPPoS<'static, Buf>;
 
 struct PPPDevice {
-    ppp: PPP,
+    ppp: PPPoS<'static>,
     port: SerialPort,
+    rx_buf: [u8; MTU],
 }
 
 impl PPPDevice {
-    fn new(ppp: PPP, port: SerialPort) -> Self {
-        Self { ppp, port }
+    fn new(ppp: PPPoS<'static>, port: SerialPort) -> Self {
+        Self {
+            ppp,
+            port,
+            rx_buf: [0; MTU],
+        }
     }
 }
 
@@ -74,16 +57,13 @@ impl Device for PPPDevice {
         let mut data: &[u8] = &[];
         loop {
             // Poll the ppp
-            match self.ppp.poll(&mut tx_buf) {
+            match self.ppp.poll(&mut tx_buf, &mut self.rx_buf) {
                 PPPoSAction::None => {}
                 PPPoSAction::Transmit(n) => self.port.write_all(&tx_buf[..n]).unwrap(),
-                PPPoSAction::Received(buf, range) => {
-                    self.ppp.put_rx_buf(Buf::new());
+                PPPoSAction::Received(range) => {
                     return Some((
                         PPPRxToken {
-                            buf,
-                            range,
-                            _phantom: PhantomData,
+                            buf: &mut self.rx_buf[range],
                         },
                         PPPTxToken {
                             port: &mut self.port,
@@ -104,7 +84,7 @@ impl Device for PPPDevice {
             }
 
             // Consume some data, saving the rest for later
-            let n = self.ppp.consume(data);
+            let n = self.ppp.consume(data, &mut self.rx_buf);
             data = &data[n..];
         }
     }
@@ -126,9 +106,7 @@ impl Device for PPPDevice {
 }
 
 struct PPPRxToken<'a> {
-    buf: Buf,
-    range: Range<usize>,
-    _phantom: PhantomData<&'a mut PPP>,
+    buf: &'a mut [u8],
 }
 
 impl<'a> RxToken for PPPRxToken<'a> {
@@ -136,13 +114,13 @@ impl<'a> RxToken for PPPRxToken<'a> {
     where
         F: FnOnce(&mut [u8]) -> R,
     {
-        f(&mut self.buf.0[self.range])
+        f(&mut self.buf)
     }
 }
 
 struct PPPTxToken<'a> {
     port: &'a mut SerialPort,
-    ppp: &'a mut PPP,
+    ppp: &'a mut PPPoS<'static>,
 }
 
 impl<'a> TxToken for PPPTxToken<'a> {
@@ -179,8 +157,6 @@ fn main() {
         password: b"mypass",
     };
     let mut ppp = PPPoS::new(config);
-
-    ppp.put_rx_buf(Buf::new());
 
     ppp.open().unwrap();
 

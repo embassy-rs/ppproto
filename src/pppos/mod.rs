@@ -4,8 +4,6 @@ mod crc;
 mod frame_reader;
 mod frame_writer;
 
-use as_slice::AsMutSlice;
-use core::convert::TryInto;
 use core::ops::Range;
 
 use self::frame_reader::FrameReader;
@@ -17,16 +15,13 @@ use crate::{Config, Status};
 pub use self::frame_writer::BufferFullError;
 
 /// Return value from [`PPPoS::poll()`].
-pub enum PPPoSAction<B> {
+pub enum PPPoSAction {
     /// No action needed to take.
     None,
     /// An IP packet was received.
     ///
-    /// The packet is located in `buffer[range]`, you must pass it to higher layers for processing.
-    ///
-    /// When this happens, the PPPoS gives you back ownership over the RX buffer. You must put a
-    /// buffer back with [`PPPoS::put_rx_buf`] before calling `poll()` or `consume()`.
-    Received(B, Range<usize>),
+    /// The packet is located in `rx_buf[range]`, you must pass it to higher layers for processing.
+    Received(Range<usize>),
     /// PPP wants to transmit some data.
     ///
     /// You must transmit `tx_buf[..n]` over the serial connection.
@@ -34,13 +29,12 @@ pub enum PPPoSAction<B> {
 }
 
 /// Main PPPoS struct.
-pub struct PPPoS<'a, B: AsMutSlice<Element = u8>> {
+pub struct PPPoS<'a> {
     frame_reader: FrameReader,
-    rx_buf: Option<B>,
     ppp: PPP<'a>,
 }
 
-impl<'a, B: AsMutSlice<Element = u8>> PPPoS<'a, B> {
+impl<'a> PPPoS<'a> {
     /// Create a new PPPoS
     ///
     /// The PPPoS is created in phase [`Dead`](crate::Phase::Dead), i.e. not connected. You must
@@ -48,7 +42,6 @@ impl<'a, B: AsMutSlice<Element = u8>> PPPoS<'a, B> {
     pub fn new(config: Config<'a>) -> Self {
         Self {
             frame_reader: FrameReader::new(),
-            rx_buf: None,
             ppp: PPP::new(config),
         }
     }
@@ -67,32 +60,12 @@ impl<'a, B: AsMutSlice<Element = u8>> PPPoS<'a, B> {
         self.ppp.open()
     }
 
-    /// Get whether there's a buffer available for RXing.
-    pub fn has_rx_buf(&self) -> bool {
-        self.rx_buf.is_some()
-    }
-
-    /// Make a buffer available for RXing.
-    ///
-    /// # Panics
-    ///
-    /// Panics if there's already a buffer (i.e. if [`has_rx_buf()`](Self::has_rx_buf) returns `true`).
-    pub fn put_rx_buf(&mut self, rx_buf: B) {
-        if self.rx_buf.is_some() {
-            panic!("called put_rx_buf when we already have a buffer.")
-        }
-
-        self.rx_buf = Some(rx_buf)
-    }
-
     /// Process received data and generate data to be send.
     ///
     /// The return value tells you what action to take. See [`PPPoSAction`] documentation
     /// for details.
-    pub fn poll(&mut self, tx_buf: &mut [u8]) -> PPPoSAction<B> {
+    pub fn poll(&mut self, tx_buf: &mut [u8], rx_buf: &mut [u8]) -> PPPoSAction {
         let mut w = FrameWriter::new(tx_buf);
-
-        let buf = unwrap!(self.rx_buf.as_mut(), "called poll() without an rx_buf").as_mut_slice();
 
         let mut tx = |pkt: Packet<'_>| {
             //info!("tx: {:?}", pkt);
@@ -109,15 +82,10 @@ impl<'a, B: AsMutSlice<Element = u8>> PPPoS<'a, B> {
 
         // Handle input
         if let Some(range) = self.frame_reader.receive() {
-            let pkt = &mut buf[range.clone()];
+            let pkt = &mut rx_buf[range.clone()];
             let proto = u16::from_be_bytes(pkt[0..2].try_into().unwrap());
             match proto.into() {
-                ProtocolType::IPv4 => {
-                    return PPPoSAction::Received(
-                        self.rx_buf.take().unwrap(),
-                        (range.start + 2)..range.end,
-                    )
-                }
+                ProtocolType::IPv4 => return PPPoSAction::Received((range.start + 2)..range.end),
                 _ => self.ppp.received(pkt, &mut tx),
             }
         }
@@ -157,8 +125,7 @@ impl<'a, B: AsMutSlice<Element = u8>> PPPoS<'a, B> {
     ///
     /// Returns how many bytes were actually consumed. If less than `data.len()`, `consume`
     /// must be called again with the remaining data.
-    pub fn consume(&mut self, data: &[u8]) -> usize {
-        let buf = unwrap!(self.rx_buf.as_mut(), "called consume() without an rx_buf");
-        self.frame_reader.consume(buf.as_mut_slice(), data)
+    pub fn consume(&mut self, data: &[u8], rx_buf: &mut [u8]) -> usize {
+        self.frame_reader.consume(rx_buf, data)
     }
 }

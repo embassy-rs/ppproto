@@ -1,5 +1,3 @@
-use core::convert::TryInto;
-
 use crate::wire::{Code, PPPPayload, Packet, Payload, ProtocolType};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
