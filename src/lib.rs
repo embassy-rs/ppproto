@@ -1,6 +1,5 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 #![warn(missing_docs)]
-#![allow(non_upper_case_globals)]
 #![doc = include_str!("../README.md")]
 
 // This mod MUST go first, so that the others see its macros.

@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.3.24", features = ["derive"] }
 nix = "0.26.2"
-ppproto = {path = "..", features=["std"]}
+ppproto = {path = ".."}
 managed = { version = "0.8.0", default-features = false }
 env_logger = "0.10.0"
 smoltcp = { version = "0.10.0", features = ["log", "socket-tcp", "socket-udp", "proto-ipv4", "medium-ethernet"] }
