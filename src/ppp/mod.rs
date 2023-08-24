@@ -11,7 +11,7 @@ use self::option_fsm::{OptionFsm, State};
 use self::pap::{State as PAPState, PAP};
 use crate::wire::{Packet, ProtocolType};
 
-pub use self::ipv4cp::Ipv4Status;
+pub use self::ipv4cp::{Ipv4Address, Ipv4Status};
 
 pub struct Config<'a> {
     pub username: &'a [u8],

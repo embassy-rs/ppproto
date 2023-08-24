@@ -7,7 +7,7 @@ mod ppp;
 pub mod pppos;
 mod wire;
 
-pub use ppp::{Config, Phase, Status};
+pub use ppp::{Config, Ipv4Address, Ipv4Status, Phase, Status};
 pub use pppos::{BufferFullError, PPPoS, PPPoSAction};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

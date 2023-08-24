@@ -639,7 +639,6 @@ dependencies = [
  "heapless",
  "log",
  "num_enum",
- "smoltcp",
 ]
 
 [[package]]

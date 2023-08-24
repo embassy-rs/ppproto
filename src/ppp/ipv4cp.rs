@@ -1,9 +1,20 @@
+use core::convert::TryInto;
+
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use super::option_fsm::{Protocol, Verdict};
 use crate::wire::ProtocolType;
 
-use smoltcp::wire::Ipv4Address;
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct Ipv4Address(pub [u8; 4]);
+impl Ipv4Address {
+    pub const UNSPECIFIED: Self = Self([0; 4]);
+
+    pub fn is_unspecified(&self) -> bool {
+        *self == Self::UNSPECIFIED
+    }
+}
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -42,7 +53,7 @@ impl IpOption {
             self.is_rejected = true
         } else {
             if data.len() == 4 {
-                self.address = Ipv4Address::from_bytes(data);
+                self.address = Ipv4Address(data.try_into().unwrap());
             } else {
                 // Peer wants us to use an address that's not 4 bytes.
                 // Should never happen, but mark option as rejected just in case to
@@ -108,7 +119,7 @@ impl Protocol for IPv4CP {
         match opt {
             OptionCode::IpAddress => {
                 if data.len() == 4 {
-                    self.peer_address = Ipv4Address::from_bytes(data);
+                    self.peer_address = Ipv4Address(data.try_into().unwrap());
                     Verdict::Ack
                 } else {
                     Verdict::Rej
@@ -120,22 +131,13 @@ impl Protocol for IPv4CP {
 
     fn own_options(&mut self, mut f: impl FnMut(u8, &[u8])) {
         if !self.address.is_rejected {
-            f(
-                OptionCode::IpAddress.into(),
-                self.address.address.as_bytes(),
-            );
+            f(OptionCode::IpAddress.into(), &self.address.address.0);
         }
         if !self.dns_server_1.is_rejected {
-            f(
-                OptionCode::Dns1.into(),
-                self.dns_server_1.address.as_bytes(),
-            );
+            f(OptionCode::Dns1.into(), &self.dns_server_1.address.0);
         }
         if !self.dns_server_2.is_rejected {
-            f(
-                OptionCode::Dns2.into(),
-                self.dns_server_2.address.as_bytes(),
-            );
+            f(OptionCode::Dns2.into(), &self.dns_server_2.address.0);
         }
     }
 
