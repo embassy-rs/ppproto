@@ -223,6 +223,7 @@ impl<P: Protocol> OptionFsm<P> {
     }
 
     fn send_echo_response<'a>(&mut self, pkt: &'a mut [u8]) -> Packet<'a> {
+        pkt[2] = Code::EchoReply as u8;
         Packet {
             proto: self.proto.protocol(),
             payload: Payload::Raw(&mut pkt[2..]),
