@@ -1,14 +1,14 @@
 #[path = "../serial_port.rs"]
 mod serial_port;
 
-use clap::Clap;
+use clap::Parser;
 use std::io::{Read, Write};
 use std::path::Path;
 
 use ppproto::{Config, PPPoS, PPPoSAction};
 use serial_port::SerialPort;
 
-#[derive(Clap)]
+#[derive(Parser)]
 struct Opts {
     #[clap(short, long)]
     device: String,

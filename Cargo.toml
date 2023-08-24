@@ -3,6 +3,3 @@ members = [
     "ppproto",
     "examples",
 ]
-
-[patch.crates-io]
-smoltcp = { git = "https://github.com/smoltcp-rs/smoltcp"}

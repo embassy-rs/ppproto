@@ -35,6 +35,7 @@ impl SerialPort {
         Ok(Self { fd })
     }
 
+    #[allow(unused)]
     pub fn set_nonblocking(&mut self, nonblocking: bool) -> io::Result<()> {
         let f = if nonblocking {
             OFlag::O_NONBLOCK

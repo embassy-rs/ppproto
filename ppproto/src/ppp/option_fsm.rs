@@ -54,7 +54,7 @@ impl<P: Protocol> OptionFsm<P> {
         &self.proto
     }
 
-    pub fn proto_mut(&mut self) -> &mut P {
+    pub fn _proto_mut(&mut self) -> &mut P {
         &mut self.proto
     }
 
@@ -198,7 +198,7 @@ impl<P: Protocol> OptionFsm<P> {
         }
     }
 
-    fn send_terminate_request<'a>(&mut self, reason: &'a mut [u8]) -> Packet<'a> {
+    fn _send_terminate_request<'a>(&mut self, reason: &'a mut [u8]) -> Packet<'a> {
         Packet {
             proto: self.proto.protocol(),
             payload: Payload::PPP(Code::TerminateReq, self.next_id(), PPPPayload::Raw(reason)),
@@ -212,7 +212,7 @@ impl<P: Protocol> OptionFsm<P> {
         }
     }
 
-    fn send_code_reject<'a>(&mut self, pkt: &'a mut [u8]) -> Packet<'a> {
+    fn _send_code_reject<'a>(&mut self, pkt: &'a mut [u8]) -> Packet<'a> {
         Packet {
             proto: self.proto.protocol(),
             payload: Payload::PPP(
