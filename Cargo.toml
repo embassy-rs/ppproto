@@ -6,7 +6,7 @@ members = [
 
 [package]
 name = "ppproto"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Point-to-Point Protocol (PPP) for embedded systems. `no-std` compatible, no alloc (heap) required."
 repository = "https://github.com/embassy-rs/ppproto"

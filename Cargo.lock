@@ -622,7 +622,7 @@ dependencies = [
 
 [[package]]
 name = "ppproto"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "defmt",
  "heapless",
