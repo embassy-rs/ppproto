@@ -47,6 +47,7 @@ pub struct Status {
 
 pub(crate) struct PPP<'a> {
     phase: Phase,
+    opening: bool,
     pub(crate) lcp: OptionFsm<LCP>,
     pub(crate) pap: PAP<'a>,
     pub(crate) ipv4cp: OptionFsm<IPv4CP>,
@@ -56,6 +57,7 @@ impl<'a> PPP<'a> {
     pub fn new(config: Config<'a>) -> Self {
         Self {
             phase: Phase::Dead,
+            opening: false,
             lcp: OptionFsm::new(LCP::new()),
             pap: PAP::new(config.username, config.password),
             ipv4cp: OptionFsm::new(IPv4CP::new()),
@@ -77,6 +79,7 @@ impl<'a> PPP<'a> {
         match self.phase {
             Phase::Dead => {
                 self.phase = Phase::Establish;
+                self.opening = true;
                 Ok(())
             }
             _ => Err(crate::InvalidStateError),
@@ -104,6 +107,7 @@ impl<'a> PPP<'a> {
             Phase::Establish => {
                 if self.lcp.state() == State::Closed {
                     tx(self.lcp.open());
+                    self.opening = false;
                 }
 
                 if self.lcp.state() == State::Opened {
@@ -142,6 +146,10 @@ impl<'a> PPP<'a> {
                 }
             }
             Phase::Open => {}
+        }
+
+        if self.lcp.state() == State::Closed && !self.opening {
+            self.phase = Phase::Dead
         }
 
         if old_phase != self.phase {
