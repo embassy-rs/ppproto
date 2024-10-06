@@ -12,11 +12,11 @@ Rust implementation of the Point-to-Point Protocol (PPP) for embedded systems. `
 
 Put this in `/etc/ppp/pap-secrets`, where `myhostname` is the hostname of your machine.
 
-```
+```txt
 myuser myhostname mypass 192.168.7.10
 ```
 
-```
+```sh
 socat -v -x PTY,link=pty1,rawer PTY,link=pty2,rawer
 pppd $PWD/pty1 115200 192.168.7.1: ms-dns 8.8.4.4 ms-dns 8.8.8.8 nodetach debug local persist silent noproxyarp
 RUST_LOG=trace cargo run --bin simple -- --device pty2
@@ -32,7 +32,7 @@ ping 192.168.7.10
 
 If you want to "MITM" the serial communications to see the raw bytes coming and going, you can do this:
 
-```
+```sh
 socat -v -x /dev/ttyUSB0 PTY,link=pty,rawer
 ```
 

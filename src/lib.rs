@@ -9,7 +9,7 @@ mod ppp;
 pub mod pppos;
 mod wire;
 
-pub use ppp::{Config, Ipv4Address, Ipv4Status, Phase, Status};
+pub use ppp::{Config, Ipv4Status, Phase, Status};
 
 /// Invalid state error.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

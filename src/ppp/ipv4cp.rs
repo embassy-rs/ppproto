@@ -1,22 +1,9 @@
+use core::net::Ipv4Addr;
+
 use num_enum::{FromPrimitive, IntoPrimitive};
 
 use super::option_fsm::{Protocol, Verdict};
 use crate::wire::ProtocolType;
-
-/// IPv4 address.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct Ipv4Address(pub [u8; 4]);
-
-impl Ipv4Address {
-    /// The unspecified address `0.0.0.0`.
-    pub const UNSPECIFIED: Self = Self([0; 4]);
-
-    /// Return whether this address is the unspecified address `0.0.0.0`.
-    pub fn is_unspecified(&self) -> bool {
-        *self == Self::UNSPECIFIED
-    }
-}
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -30,19 +17,19 @@ enum OptionCode {
 }
 
 struct IpOption {
-    address: Ipv4Address,
+    address: Ipv4Addr,
     is_rejected: bool,
 }
 
 impl IpOption {
     fn new() -> Self {
         Self {
-            address: Ipv4Address::UNSPECIFIED,
+            address: Ipv4Addr::UNSPECIFIED,
             is_rejected: false,
         }
     }
 
-    fn get(&self) -> Option<Ipv4Address> {
+    fn get(&self) -> Option<Ipv4Addr> {
         if self.is_rejected || self.address.is_unspecified() {
             None
         } else {
@@ -54,13 +41,13 @@ impl IpOption {
         if is_rej {
             self.is_rejected = true
         } else {
-            if data.len() == 4 {
-                self.address = Ipv4Address(data.try_into().unwrap());
-            } else {
+            match <[u8; 4]>::try_from(data) {
+                // Peer addr is OK
+                Ok(data) => self.address = Ipv4Addr::from(data),
                 // Peer wants us to use an address that's not 4 bytes.
                 // Should never happen, but mark option as rejected just in case to
                 // avoid endless loop.
-                self.is_rejected = true
+                Err(_) => self.is_rejected = true,
             }
         }
     }
@@ -71,15 +58,15 @@ impl IpOption {
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Ipv4Status {
     /// Our adress
-    pub address: Option<Ipv4Address>,
+    pub address: Option<Ipv4Addr>,
     /// The peer's address
-    pub peer_address: Option<Ipv4Address>,
+    pub peer_address: Option<Ipv4Addr>,
     /// DNS servers provided by the peer.
-    pub dns_servers: [Option<Ipv4Address>; 2],
+    pub dns_servers: [Option<Ipv4Addr>; 2],
 }
 
 pub(crate) struct IPv4CP {
-    peer_address: Ipv4Address,
+    peer_address: Ipv4Addr,
 
     address: IpOption,
     dns_server_1: IpOption,
@@ -89,7 +76,7 @@ pub(crate) struct IPv4CP {
 impl IPv4CP {
     pub fn new() -> Self {
         Self {
-            peer_address: Ipv4Address::UNSPECIFIED,
+            peer_address: Ipv4Addr::UNSPECIFIED,
 
             address: IpOption::new(),
             dns_server_1: IpOption::new(),
@@ -123,27 +110,26 @@ impl Protocol for IPv4CP {
         let opt = OptionCode::from(code);
         trace!("IPv4CP: rx option {:?} {:?} {:?}", code, opt, data);
         match opt {
-            OptionCode::IpAddress => {
-                if data.len() == 4 {
-                    self.peer_address = Ipv4Address(data.try_into().unwrap());
+            OptionCode::IpAddress => match <[u8; 4]>::try_from(data) {
+                Ok(data) => {
+                    self.peer_address = Ipv4Addr::from(data);
                     Verdict::Ack
-                } else {
-                    Verdict::Rej
                 }
-            }
+                Err(_) => Verdict::Rej,
+            },
             _ => Verdict::Rej,
         }
     }
 
     fn own_options(&mut self, mut f: impl FnMut(u8, &[u8])) {
         if !self.address.is_rejected {
-            f(OptionCode::IpAddress.into(), &self.address.address.0);
+            f(OptionCode::IpAddress.into(), &self.address.address.octets());
         }
         if !self.dns_server_1.is_rejected {
-            f(OptionCode::Dns1.into(), &self.dns_server_1.address.0);
+            f(OptionCode::Dns1.into(), &self.dns_server_1.address.octets());
         }
         if !self.dns_server_2.is_rejected {
-            f(OptionCode::Dns2.into(), &self.dns_server_2.address.0);
+            f(OptionCode::Dns2.into(), &self.dns_server_2.address.octets());
         }
     }
 

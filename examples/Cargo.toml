@@ -10,7 +10,7 @@ nix = "0.26.2"
 ppproto = {path = ".."}
 managed = { version = "0.8.0", default-features = false }
 env_logger = "0.10.0"
-smoltcp = { version = "0.10.0", features = ["log", "socket-tcp", "socket-udp", "proto-ipv4", "medium-ethernet"] }
+smoltcp = { git="https://github.com/smoltcp-rs/smoltcp", rev="b65e1b64dc9b66fa984a2ad34e90685cb0b606de", features = ["log", "socket-tcp", "socket-udp", "proto-ipv4", "medium-ethernet"] }
 log = "0.4.20"
 futures = "0.3.28"
 async-io = "1.13.0"

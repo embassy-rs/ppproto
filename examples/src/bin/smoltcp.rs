@@ -112,7 +112,7 @@ struct PPPRxToken<'a> {
 impl<'a> RxToken for PPPRxToken<'a> {
     fn consume<R, F>(mut self, f: F) -> R
     where
-        F: FnOnce(&mut [u8]) -> R,
+        F: FnOnce(&[u8]) -> R,
     {
         f(&mut self.buf)
     }
@@ -202,8 +202,6 @@ fn main() {
 
         if let Some(ipv4) = status.ipv4 {
             if let Some(want_addr) = ipv4.address {
-                // convert to smoltcp
-                let want_addr = smoltcp::wire::Ipv4Address::from_bytes(&want_addr.0);
                 iface.update_ip_addrs(|addrs| {
                     if addrs.len() != 1 || addrs[0].address() != want_addr.into() {
                         addrs.clear();

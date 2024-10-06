@@ -1,9 +1,12 @@
 #![macro_use]
-#![allow(unused_macros)]
+#![allow(unused)]
+
+use core::fmt::{Debug, Display, LowerHex};
 
 #[cfg(all(feature = "defmt", feature = "log"))]
 compile_error!("You may not enable both `defmt` and `log` features.");
 
+#[collapse_debuginfo(yes)]
 macro_rules! assert {
     ($($x:tt)*) => {
         {
@@ -15,6 +18,7 @@ macro_rules! assert {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! assert_eq {
     ($($x:tt)*) => {
         {
@@ -26,6 +30,7 @@ macro_rules! assert_eq {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! assert_ne {
     ($($x:tt)*) => {
         {
@@ -37,6 +42,7 @@ macro_rules! assert_ne {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! debug_assert {
     ($($x:tt)*) => {
         {
@@ -48,6 +54,7 @@ macro_rules! debug_assert {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! debug_assert_eq {
     ($($x:tt)*) => {
         {
@@ -59,6 +66,7 @@ macro_rules! debug_assert_eq {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! debug_assert_ne {
     ($($x:tt)*) => {
         {
@@ -70,6 +78,7 @@ macro_rules! debug_assert_ne {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! todo {
     ($($x:tt)*) => {
         {
@@ -81,6 +90,7 @@ macro_rules! todo {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! unreachable {
     ($($x:tt)*) => {
         {
@@ -92,6 +102,7 @@ macro_rules! unreachable {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! panic {
     ($($x:tt)*) => {
         {
@@ -103,6 +114,7 @@ macro_rules! panic {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! trace {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
@@ -116,6 +128,7 @@ macro_rules! trace {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! debug {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
@@ -129,6 +142,7 @@ macro_rules! debug {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! info {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
@@ -142,6 +156,7 @@ macro_rules! info {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! warn {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
@@ -155,6 +170,7 @@ macro_rules! warn {
     };
 }
 
+#[collapse_debuginfo(yes)]
 macro_rules! error {
     ($s:literal $(, $x:expr)* $(,)?) => {
         {
@@ -169,6 +185,7 @@ macro_rules! error {
 }
 
 #[cfg(feature = "defmt")]
+#[collapse_debuginfo(yes)]
 macro_rules! unwrap {
     ($($x:tt)*) => {
         ::defmt::unwrap!($($x)*)
@@ -176,6 +193,7 @@ macro_rules! unwrap {
 }
 
 #[cfg(not(feature = "defmt"))]
+#[collapse_debuginfo(yes)]
 macro_rules! unwrap {
     ($arg:expr) => {
         match $crate::fmt::Try::into_result($arg) {
@@ -221,5 +239,32 @@ impl<T, E> Try for Result<T, E> {
     #[inline]
     fn into_result(self) -> Self {
         self
+    }
+}
+
+pub(crate) struct Bytes<'a>(pub &'a [u8]);
+
+impl<'a> Debug for Bytes<'a> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:#02x?}", self.0)
+    }
+}
+
+impl<'a> Display for Bytes<'a> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:#02x?}", self.0)
+    }
+}
+
+impl<'a> LowerHex for Bytes<'a> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:#02x?}", self.0)
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl<'a> defmt::Format for Bytes<'a> {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "{:02x}", self.0)
     }
 }
