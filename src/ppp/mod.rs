@@ -12,6 +12,8 @@ use crate::wire::{Packet, ProtocolType};
 pub use self::ipv4cp::Ipv4Status;
 
 /// PPP configuration.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Config<'a> {
     /// Username for PAP.
     pub username: &'a [u8],
