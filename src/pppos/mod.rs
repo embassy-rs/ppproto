@@ -9,7 +9,7 @@ use core::ops::Range;
 use self::frame_reader::FrameReader;
 use self::frame_writer::FrameWriter;
 use crate::ppp::PPP;
-use crate::wire::{Packet, ProtocolType};
+use crate::wire::{Packet, ProtocolType, MAX_CONTROL_LEN};
 use crate::{Config, Status};
 
 pub use self::frame_writer::BufferFullError;
@@ -70,23 +70,36 @@ impl<'a> PPPoS<'a> {
         let mut tx = |pkt: Packet<'_>| {
             //debug!("tx: {:?}", pkt);
 
-            let mut buf = [0; 128];
+            let mut buf = [0; MAX_CONTROL_LEN];
             let len = pkt.buffer_len();
-            assert!(len <= buf.len());
+            if len > buf.len() {
+                warn!(
+                    "dropping {} byte reply: larger than the {} byte buffer",
+                    len,
+                    buf.len()
+                );
+                return;
+            }
             pkt.emit(&mut buf[..len]);
 
-            w.start().unwrap();
-            w.append(&mut buf[..len]).unwrap();
-            w.finish().unwrap();
+            if w.frame(&buf[..len]).is_err() {
+                warn!("dropping {} byte reply: tx buffer full", len);
+            }
         };
 
         // Handle input
         if let Some(range) = self.frame_reader.receive() {
             let pkt = &mut rx_buf[range.clone()];
-            let proto = u16::from_be_bytes(pkt[0..2].try_into().unwrap());
-            match proto.into() {
-                ProtocolType::IPv4 => return PPPoSAction::Received((range.start + 2)..range.end),
-                _ => self.ppp.received(pkt, &mut tx),
+            if pkt.len() < 2 {
+                warn!("dropping frame without a protocol field");
+            } else {
+                let proto = u16::from_be_bytes(pkt[0..2].try_into().unwrap());
+                match proto.into() {
+                    ProtocolType::IPv4 => {
+                        return PPPoSAction::Received((range.start + 2)..range.end)
+                    }
+                    _ => self.ppp.received(pkt, &mut tx),
+                }
             }
         }
 

@@ -84,4 +84,18 @@ impl<'a> FrameWriter<'a> {
         self.crc = crc16(self.crc, data);
         Ok(())
     }
+
+    /// Write `data` as one complete frame, or nothing if it doesn't fit.
+    pub fn frame(&mut self, data: &[u8]) -> Result<(), BufferFullError> {
+        let len = self.len;
+        let res = (|| {
+            self.start()?;
+            self.append(data)?;
+            self.finish()
+        })();
+        if res.is_err() {
+            self.len = len;
+        }
+        res
+    }
 }

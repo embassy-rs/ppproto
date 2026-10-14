@@ -3,6 +3,7 @@ use num_enum::{FromPrimitive, IntoPrimitive};
 
 pub const MAX_OPTIONS: usize = 6;
 pub const MAX_OPTION_LEN: usize = 4;
+pub const MAX_CONTROL_LEN: usize = 128;
 
 #[derive(FromPrimitive, IntoPrimitive, Copy, Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]

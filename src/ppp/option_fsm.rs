@@ -1,6 +1,9 @@
 use heapless::Vec;
 
-use crate::wire::{Code, OptionVal, Options, PPPPayload, Packet, Payload, ProtocolType};
+use crate::wire::{
+    Code, OptionVal, Options, PPPPayload, Packet, Payload, ProtocolType, MAX_CONTROL_LEN,
+    MAX_OPTIONS, MAX_OPTION_LEN,
+};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -75,7 +78,11 @@ impl<P: Protocol> OptionFsm<P> {
         let code = Code::from(pkt[2]);
         let id = pkt[3];
         let len = u16::from_be_bytes(pkt[4..6].try_into().unwrap()) as usize;
-        if len + 2 > pkt.len() {
+        if len < 4 {
+            warn!("PPP packet len field too short");
+            return;
+        }
+        if len > pkt.len() - 2 {
             warn!("PPP packet len too short");
             return;
         }
@@ -97,7 +104,10 @@ impl<P: Protocol> OptionFsm<P> {
             (_, State::Closed) => tx(self.send_terminate_ack(id)),
 
             (Code::ConfigureReq, _) => {
-                let resp = self.received_configure_req(pkt);
+                let Some(resp) = self.received_configure_req(pkt) else {
+                    warn!("discarding Configure-Request with unusable options");
+                    return;
+                };
                 let acked = matches!(resp.payload, Payload::PPP(Code::ConfigureAck, _, _));
                 tx(resp);
 
@@ -128,16 +138,15 @@ impl<P: Protocol> OptionFsm<P> {
 
             (Code::ConfigureNack, _) | (Code::ConfigureRej, _) => {
                 let is_rej = code == Code::ConfigureRej;
-
-                if pkt.len() < 6 {
-                    panic!("too short")
-                }
                 let pkt = &pkt[6..]; // skip header
 
-                parse_options(pkt, |code, data| {
+                if parse_options(pkt, |_, _| {}).is_err() {
+                    warn!("discarding malformed Configure-Nak/Rej");
+                    return;
+                }
+                let _ = parse_options(pkt, |code, data| {
                     self.proto.own_option_nacked(code, data, is_rej)
-                })
-                .unwrap();
+                });
 
                 match self.state {
                     State::Closed => unreachable!(),
@@ -232,25 +241,39 @@ impl<P: Protocol> OptionFsm<P> {
 
     // TODO maybe this should be in PPP because it's only for LCP
     pub fn send_protocol_reject<'a>(&mut self, pkt: &'a mut [u8]) -> Packet<'a> {
+        let len = pkt.len();
         Packet {
             proto: self.proto.protocol(),
-            payload: Payload::PPP(Code::ProtocolRej, self.next_id(), PPPPayload::Raw(pkt)),
+            // RFC 1661 5.7: the Rejected-Information MUST fit the peer's MRU; here it is
+            // truncated further, to fit the reply buffer.
+            payload: Payload::PPP(
+                Code::ProtocolRej,
+                self.next_id(),
+                PPPPayload::Raw(&mut pkt[..len.min(MAX_CONTROL_LEN - 6)]),
+            ),
         }
     }
 
-    fn received_configure_req(&mut self, pkt: &[u8]) -> Packet<'static> {
+    fn received_configure_req(&mut self, pkt: &[u8]) -> Option<Packet<'static>> {
         let id = pkt[3];
         let mut code = Code::ConfigureAck;
-
-        if pkt.len() < 6 {
-            panic!("too short");
-        }
         let pkt = &pkt[6..]; // skip header
+
+        // Validate before touching any state, so a discarded request has no side effects.
+        let mut count = 0;
+        let mut fits = true;
+        let valid = parse_options(pkt, |_, data| {
+            count += 1;
+            fits &= data.len() <= MAX_OPTION_LEN;
+        });
+        if valid.is_err() || count > MAX_OPTIONS || !fits {
+            return None;
+        }
 
         let mut opts = Vec::new();
 
         self.proto.peer_options_start();
-        parse_options(pkt, |ocode, odata| {
+        let _ = parse_options(pkt, |ocode, odata| {
             let (ret_code, data) = match self.proto.peer_option_received(ocode, odata) {
                 Verdict::Ack => (Code::ConfigureAck, odata),
                 Verdict::Nack(data) => (Code::ConfigureNack, data),
@@ -263,17 +286,14 @@ impl<P: Protocol> OptionFsm<P> {
             }
 
             if code == ret_code {
-                if opts.push(OptionVal::new(ocode, data)).is_err() {
-                    panic!("rx ConfigureReq: too many options")
-                }
+                let _ = opts.push(OptionVal::new(ocode, data));
             }
-        })
-        .unwrap();
+        });
 
-        Packet {
+        Some(Packet {
             proto: self.proto.protocol(),
             payload: Payload::PPP(code, id, PPPPayload::Options(Options(opts))),
-        }
+        })
     }
 }
 

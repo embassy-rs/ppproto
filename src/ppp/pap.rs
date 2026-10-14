@@ -49,7 +49,7 @@ impl<'a> PAP<'a> {
         let code = Code::from(pkt[2]);
         let _id = pkt[3];
         let len = u16::from_be_bytes(pkt[4..6].try_into().unwrap()) as usize;
-        if len > pkt.len() {
+        if len > pkt.len() - 2 {
             warn!("PAP packet len too short");
             return;
         }
